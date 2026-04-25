@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -8,12 +9,13 @@
 
 class Event {
 public:
-  std::chrono::system_clock::time_point start{};
-  std::chrono::system_clock::time_point end{};
+  int64_t id = 0; // 0 -> undef
+  std::chrono::system_clock::time_point start{}; // event start time/date
+  std::chrono::system_clock::time_point end{}; // event end time/date
   std::string name;
   std::string description;
-  bool is_checkable = false;
-  bool is_checked = false;
+  bool is_checkable = false; // is check box available
+  bool is_checked = false; // is check box activen
   std::vector<Task> tasks;
 
   void exec() const;
