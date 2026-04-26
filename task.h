@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstdint>
 #include <string>
 
@@ -7,8 +9,9 @@ enum TaskStatus {
 };
 
 struct Task {
+	uint64_t id = 0; // 0 -> undef
 	std::string command;
-	TaskStatus status;  // TODO: сделать надо(в будущее)
-	uint32_t exit_code; // TODO: сделать надо(в будущее)
+	TaskStatus status = STOPPED; // TODO: сделать надо(в будущее)
+	uint16_t exit_code = 0; // TODO: сделать надо(в будущее)
 	std::string output; // TODO: сделать надо(в будущее)
 };

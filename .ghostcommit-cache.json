@@ -1,21 +1,23 @@
 {
-  "styleContext": "STYLE GUIDE (from repo history):\n- Format: conventional commits with scope\n- Language: English\n- Average subject length: 51 chars\n- Subject starts with lowercase",
+  "styleContext": "STYLE GUIDE (from repo history):\n- Format: conventional commits with scope\n- Common scopes: dbManager\n- Language: English\n- Average subject length: 45 chars\n- Subject starts with lowercase",
   "analysis": {
     "usesConventionalCommits": true,
     "conventionalCommitRatio": 1,
     "usesScope": true,
-    "commonScopes": [],
+    "commonScopes": [
+      "dbManager"
+    ],
     "language": "english",
-    "averageSubjectLength": 51,
+    "averageSubjectLength": 45,
     "usesBody": false,
     "bodyRatio": 0,
     "usesEmoji": false,
     "emojiRatio": 0,
     "usesLowercase": true,
     "ticketPattern": null,
-    "commitCount": 1
+    "commitCount": 2
   },
-  "lastCommitHash": "6e2e1142a44db280727e2a50f142e24f3c6adeb1",
-  "commitCount": 1,
-  "timestamp": 1777126032503
+  "lastCommitHash": "f338465af8148097ba58e98e9353b5b055539e00",
+  "commitCount": 2,
+  "timestamp": 1777185545010
 }

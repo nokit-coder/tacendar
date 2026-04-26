@@ -9,7 +9,7 @@
 
 class Event {
 public:
-  int64_t id = 0; // 0 -> undef
+  uint64_t id = 0; // 0 -> undef
   std::chrono::system_clock::time_point start{}; // event start time/date
   std::chrono::system_clock::time_point end{}; // event end time/date
   std::string name;
