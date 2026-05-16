@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <thread>
 
 enum TaskStatus {
 	STOPPED,
@@ -14,4 +15,8 @@ struct Task {
 	TaskStatus status = STOPPED; // TODO: сделать надо(в будущее)
 	uint16_t exit_code = 0; // TODO: сделать надо(в будущее)
 	std::string output; // TODO: сделать надо(в будущее)
+	
+	void exec();
 };
+
+std::thread exec_task_thread(Task &t);

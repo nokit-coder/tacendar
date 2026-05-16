@@ -11,13 +11,13 @@
 
 class SqliteDb {
 public:
-  explicit SqliteDb(const std::string &filename);
+  SqliteDb(const std::string &filename);
   ~SqliteDb();
 
   bool open(const std::string &filename);
 
 	// is db available
-  bool ok() const;
+  bool is_available() const;
   const std::string &last_error() const;
 
 	// create default tbls
@@ -38,3 +38,7 @@ private:
   bool exec(const std::string &sql);
 };
 
+bool auto_insert_event(SqliteDb &db, Event &event);
+bool auto_insert_events(SqliteDb &db, std::vector<Event> &events);
+
+std::vector<Event> auto_fetch_events(SqliteDb &db);

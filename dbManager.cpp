@@ -1,5 +1,4 @@
 #include <cstdint>
-#include <iostream>
 #include <sqlite3.h>
 #include <string>
 #include <vector>
@@ -40,7 +39,7 @@ bool SqliteDb::open(const std::string &filename) {
   return true;
 }
 
-bool SqliteDb::ok() const { return db_ != nullptr; }
+bool SqliteDb::is_available() const { return db_ != nullptr; }
 
 const std::string &SqliteDb::last_error() const { return last_error_; }
 
@@ -137,10 +136,10 @@ bool SqliteDb::insert_event(Event &event) {
   }
   sqlite3_bind_int64(stmt, 2, to_unix_seconds(event.start));
   sqlite3_bind_int64(stmt, 3, to_unix_seconds(event.end));
-  sqlite3_bind_text(stmt, 4, event.name.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(stmt, 5, event.description.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_int(stmt, 6, event.is_checkable);
-  sqlite3_bind_int(stmt, 7, event.is_checked);
+  sqlite3_bind_text( stmt, 4, event.name.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text( stmt, 5, event.description.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_int(  stmt, 6, event.is_checkable);
+  sqlite3_bind_int(  stmt, 7, event.is_checked);
 
   rc = sqlite3_step(stmt);
   if (rc != SQLITE_DONE) {
@@ -187,9 +186,9 @@ bool SqliteDb::insert_task(Task &task, uint64_t &event_id) {
     sqlite3_bind_null(stmt, 1);
   }
   sqlite3_bind_int64(stmt, 2, event_id);
-  sqlite3_bind_text(stmt, 3, task.command.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_int(stmt, 4, task.exit_code);
-  sqlite3_bind_text(stmt, 5, task.output.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text( stmt, 3, task.command.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_int(  stmt, 4, task.exit_code);
+  sqlite3_bind_text( stmt, 5, task.output.c_str(),  -1, SQLITE_TRANSIENT);
 
   rc = sqlite3_step(stmt);
   if (rc != SQLITE_DONE) {
@@ -316,4 +315,34 @@ std::vector<Task> SqliteDb::fetch_tasks(uint64_t event_id) {
 	sqlite3_finalize(stmt);
 
 	return result;
+}
+
+bool auto_insert_event(SqliteDb &db, Event &event) {
+	if (!db.insert_event(event)) return false;
+
+	for (auto &task : event.tasks) {
+		if (!db.insert_task(task, event.id)) return false;
+	}
+
+	return true;
+}
+
+bool auto_insert_events(SqliteDb &db, std::vector<Event> &events) {
+	for (auto &event : events) {
+		if (!auto_insert_event(db, event)) return false;
+	}
+
+	return true;
+}
+
+std::vector<Event> auto_fetch_events(SqliteDb &db) {
+	std::vector<Event> events = db.fetch_events();
+	if (!db.last_error().empty()) return events;
+	
+	for (auto &event : events) {
+		event.tasks = db.fetch_tasks(event.id);
+		if (!db.last_error().empty()) return events;
+	}
+
+	return events;
 }
