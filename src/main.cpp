@@ -1,6 +1,6 @@
-#include "event.h"
-#include "task.h"
-#include "dbManager.h"
+#include "../include/event.h"
+#include "../include/task.h"
+#include "../include/dbManager.h"
 #include <chrono>
 #include <cstdio>
 #include <iostream>

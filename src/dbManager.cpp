@@ -3,33 +3,33 @@
 #include <string>
 #include <vector>
 
-#include "dbManager.h"
-#include "event.h"
-#include "task.h"
+#include "../include/dbManager.h"
+#include "../include/event.h"
+#include "../include/task.h"
 
 SqliteDb::SqliteDb(const std::string &filename) { open(filename); }
 
 SqliteDb::~SqliteDb() {
-  if (db_) {
-    sqlite3_close(db_);
-    db_ = nullptr;
+  if (_db) {
+    sqlite3_close(_db);
+    _db = nullptr;
   }
 }
 
 bool SqliteDb::open(const std::string &filename) {
   last_error_.clear();
 
-  if (db_) {
-    sqlite3_close(db_);
-    db_ = nullptr;
+  if (_db) {
+    sqlite3_close(_db);
+    _db = nullptr;
   }
 
-  int rc = sqlite3_open(filename.c_str(), &db_);
+  int rc = sqlite3_open(filename.c_str(), &_db);
   if (rc != SQLITE_OK) {
-    if (db_) {
-      last_error_ = sqlite3_errmsg(db_);
-      sqlite3_close(db_);
-      db_ = nullptr;
+    if (_db) {
+      last_error_ = sqlite3_errmsg(_db);
+      sqlite3_close(_db);
+      _db = nullptr;
     } else {
       last_error_ = "sqlite3_open failed";
     }
@@ -39,25 +39,25 @@ bool SqliteDb::open(const std::string &filename) {
   return true;
 }
 
-bool SqliteDb::is_available() const { return db_ != nullptr; }
+bool SqliteDb::ok() const { return _db != nullptr; }
 
 const std::string &SqliteDb::last_error() const { return last_error_; }
 
 bool SqliteDb::exec(const std::string &sql) {
   last_error_.clear();
-  if (!db_) {
+  if (!_db) {
     last_error_ = "db is not open";
     return false;
   }
 
   char *err = nullptr;
-  int rc = sqlite3_exec(db_, sql.c_str(), nullptr, nullptr, &err);
+  int rc = sqlite3_exec(_db, sql.c_str(), nullptr, nullptr, &err);
   if (rc != SQLITE_OK) {
     if (err) {
       last_error_ = err;
       sqlite3_free(err);
     } else {
-      last_error_ = sqlite3_errmsg(db_);
+      last_error_ = sqlite3_errmsg(_db);
     }
     return false;
   }
@@ -105,7 +105,7 @@ bool SqliteDb::create_tables() {
 
 bool SqliteDb::insert_event(Event &event) {
   last_error_.clear();
-  if (!db_) {
+  if (!_db) {
     last_error_ = "db is not open";
     return false;
   }
@@ -123,9 +123,9 @@ bool SqliteDb::insert_event(Event &event) {
       "is_checked=excluded.is_checked;";
 
   sqlite3_stmt *stmt = nullptr;
-  int rc = sqlite3_prepare_v2(db_, q, -1, &stmt, nullptr);
+  int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
   if (rc != SQLITE_OK) {
-    last_error_ = sqlite3_errmsg(db_);
+    last_error_ = sqlite3_errmsg(_db);
     return false;
   }
 
@@ -143,13 +143,13 @@ bool SqliteDb::insert_event(Event &event) {
 
   rc = sqlite3_step(stmt);
   if (rc != SQLITE_DONE) {
-    last_error_ = sqlite3_errmsg(db_);
+    last_error_ = sqlite3_errmsg(_db);
     sqlite3_finalize(stmt);
     return false;
   }
 
   if (event.id == 0) {
-    event.id = sqlite3_last_insert_rowid(db_);
+    event.id = sqlite3_last_insert_rowid(_db);
   }
 
   sqlite3_finalize(stmt);
@@ -158,7 +158,7 @@ bool SqliteDb::insert_event(Event &event) {
 
 bool SqliteDb::insert_task(Task &task, uint64_t &event_id) {
   last_error_.clear();
-  if (!db_) {
+  if (!_db) {
     last_error_ = "db is not open";
     return false;
   }
@@ -174,9 +174,9 @@ bool SqliteDb::insert_task(Task &task, uint64_t &event_id) {
       "output=excluded.output";
 
   sqlite3_stmt *stmt = nullptr;
-  int rc = sqlite3_prepare_v2(db_, q, -1, &stmt, nullptr);
+  int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
   if (rc != SQLITE_OK) {
-    last_error_ = sqlite3_errmsg(db_);
+    last_error_ = sqlite3_errmsg(_db);
     return false;
   }
 
@@ -192,13 +192,13 @@ bool SqliteDb::insert_task(Task &task, uint64_t &event_id) {
 
   rc = sqlite3_step(stmt);
   if (rc != SQLITE_DONE) {
-    last_error_ = sqlite3_errmsg(db_);
+    last_error_ = sqlite3_errmsg(_db);
     sqlite3_finalize(stmt);
     return false;
   }
 
 	if (task.id == 0) {
-		task.id = sqlite3_last_insert_rowid(db_);
+		task.id = sqlite3_last_insert_rowid(_db);
 	}
 
   sqlite3_finalize(stmt);
@@ -209,7 +209,7 @@ std::vector<Event> SqliteDb::fetch_events() {
 	std::vector<Event> result;
 
 	last_error_.clear();
-	if (!db_) {
+	if (!_db) {
 		last_error_ = "db is not open";
 		return result;
 	}
@@ -219,9 +219,9 @@ std::vector<Event> SqliteDb::fetch_events() {
 
 	sqlite3_stmt* stmt;
 
-	int rc = sqlite3_prepare_v2(db_, q, -1, &stmt, nullptr);
+	int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
 	if (rc != SQLITE_OK) {
-    last_error_ = sqlite3_errmsg(db_);
+    last_error_ = sqlite3_errmsg(_db);
 		return result;
 	}
 
@@ -248,7 +248,7 @@ std::vector<std::pair<uint64_t, Task>> SqliteDb::fetch_tasks() {
 	std::vector<std::pair<uint64_t, Task>> result;
 
 	last_error_.clear();
-	if (!db_) {
+	if (!_db) {
 		last_error_ = "db is not open";
 		return result;
 	}
@@ -257,9 +257,9 @@ std::vector<std::pair<uint64_t, Task>> SqliteDb::fetch_tasks() {
 
 	sqlite3_stmt* stmt;
 
-	int rc = sqlite3_prepare_v2(db_, q, -1, &stmt, nullptr);
+	int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
 	if (rc != SQLITE_OK) {
-    last_error_ = sqlite3_errmsg(db_);
+    last_error_ = sqlite3_errmsg(_db);
 		return result;
 	}
 
@@ -284,7 +284,7 @@ std::vector<Task> SqliteDb::fetch_tasks(uint64_t event_id) {
 	std::vector<Task> result;
 
 	last_error_.clear();
-	if (!db_) {
+	if (!_db) {
 		last_error_ = "db is not open";
 		return result;
 	}
@@ -293,9 +293,9 @@ std::vector<Task> SqliteDb::fetch_tasks(uint64_t event_id) {
 
 	sqlite3_stmt* stmt;
 
-	int rc = sqlite3_prepare_v2(db_, q, -1, &stmt, nullptr);
+	int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
 	if (rc != SQLITE_OK) {
-    last_error_ = sqlite3_errmsg(db_);
+    last_error_ = sqlite3_errmsg(_db);
 		return result;
 	}
 

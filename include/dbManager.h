@@ -17,7 +17,7 @@ public:
   bool open(const std::string &filename);
 
 	// is db available
-  bool is_available() const;
+  bool ok() const;
   const std::string &last_error() const;
 
 	// create default tbls
@@ -31,7 +31,7 @@ public:
 	std::vector<Task> fetch_tasks(uint64_t event_id);
 
 private:
-  sqlite3 *db_ = nullptr;
+  sqlite3 *_db = nullptr;
   std::string last_error_;
 
 	// exec non returning/param sql
