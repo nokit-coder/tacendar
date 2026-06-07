@@ -4,19 +4,21 @@
 #include <string>
 #include <thread>
 
-enum TaskStatus {
-	STOPPED,
-	RUNNING,
-};
 
 struct Task {
+	enum class Status {
+		STOPPED,
+		RUNNING,
+		PAST,
+	};
+
 	uint64_t id = 0; // 0 -> undef
 	std::string command;
-	TaskStatus status = STOPPED; // TODO: сделать надо(в будущее)
-	uint16_t exit_code = 0; // TODO: сделать надо(в будущее)
-	std::string output; // TODO: сделать надо(в будущее)
-	
+	Status status = Status::STOPPED;
+	uint16_t exit_code = 0;
+	std::string output;
+
 	void exec();
 };
 
-std::thread exec_task_thread(Task &t);
+int operator+(Task::Status s);

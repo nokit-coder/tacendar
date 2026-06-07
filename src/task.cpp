@@ -1,27 +1,21 @@
 #include "../include/task.h"
 
-#include <cstdint>
 #include <cstdio>
-#include <cstdlib>
-#include <iostream>
-#include <thread>
 
 void Task::exec() {
-	status = RUNNING;
+	status = Status::RUNNING;
 
-	FILE* pipe = popen(command.c_str(), "r");
+	FILE* pipe = popen((command + " 2>/dev/null").c_str(), "r");
 
+	output.clear();
 	char buffer[128];
 	while (fgets(buffer, sizeof(buffer), pipe)) output += buffer;
 
 	exit_code = WEXITSTATUS(pclose(pipe));
 
-  status = STOPPED;
-  std::cout << exit_code << " << out\n";
+  status = Status::PAST;
 }
 
-std::thread exec_task_thread(Task &t) {
-  std::thread th(&Task::exec, &t);
-	th.detach();
-  return th;
+int operator+(Task::Status s) {
+	return static_cast<int>(s);
 }

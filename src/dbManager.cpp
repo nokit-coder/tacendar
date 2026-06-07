@@ -43,7 +43,7 @@ bool SqliteDb::ok() const { return _db != nullptr; }
 
 const std::string &SqliteDb::last_error() const { return last_error_; }
 
-bool SqliteDb::exec(const std::string &sql) {
+bool SqliteDb::exec(const char sql[]) {
   last_error_.clear();
   if (!_db) {
     last_error_ = "db is not open";
@@ -51,7 +51,7 @@ bool SqliteDb::exec(const std::string &sql) {
   }
 
   char *err = nullptr;
-  int rc = sqlite3_exec(_db, sql.c_str(), nullptr, nullptr, &err);
+  int rc = sqlite3_exec(_db, sql, nullptr, nullptr, &err);
   if (rc != SQLITE_OK) {
     if (err) {
       last_error_ = err;
@@ -67,10 +67,13 @@ bool SqliteDb::exec(const std::string &sql) {
   }
   return true;
 }
+bool SqliteDb::exec(const std::string &sql) {
+	return exec(sql.c_str());
+}
 
 bool SqliteDb::create_tables() {
 	// EVENTS
-  std::string q1 =
+  const char *q1 =
       "CREATE TABLE IF NOT EXISTS events ("
       "id INTEGER PRIMARY KEY AUTOINCREMENT,"
       "start_unix INTEGER NOT NULL,"
@@ -78,7 +81,8 @@ bool SqliteDb::create_tables() {
       "name TEXT NOT NULL,"
       "description TEXT NOT NULL,"
       "is_checkable INTEGER NOT NULL,"
-      "is_checked INTEGER NOT NULL"
+      "is_checked INTEGER NOT NULL,"
+      "status INTEGER NOT NULL"
       ");";
 
   if (!exec(q1)) {
@@ -86,7 +90,7 @@ bool SqliteDb::create_tables() {
   }
 
 	// TASKS
-  std::string q2 =
+  const char *q2 =
       "CREATE TABLE IF NOT EXISTS tasks ("
       "id INTEGER PRIMARY KEY AUTOINCREMENT,"
       "event_id INTEGER NOT NULL,"
@@ -112,15 +116,16 @@ bool SqliteDb::insert_event(Event &event) {
 
 	const char *q =
       "INSERT INTO events "
-      "(id, start_unix, end_unix, name, description, is_checkable, is_checked) "
-      "VALUES (?, ?, ?, ?, ?, ?, ?) "
+      "(id, start_unix, end_unix, name, description, is_checkable, is_checked, status) "
+      "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
       "ON CONFLICT(id) DO UPDATE SET "
       "start_unix=excluded.start_unix, "
       "end_unix=excluded.end_unix, "
       "name=excluded.name, "
       "description=excluded.description, "
       "is_checkable=excluded.is_checkable, "
-      "is_checked=excluded.is_checked;";
+      "is_checked=excluded.is_checked,"
+      "status=excluded.status;";
 
   sqlite3_stmt *stmt = nullptr;
   int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
@@ -134,12 +139,13 @@ bool SqliteDb::insert_event(Event &event) {
   } else {
     sqlite3_bind_null(stmt, 1);
   }
-  sqlite3_bind_int64(stmt, 2, to_unix_seconds(event.start));
-  sqlite3_bind_int64(stmt, 3, to_unix_seconds(event.end));
-  sqlite3_bind_text( stmt, 4, event.name.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text( stmt, 5, event.description.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_int(  stmt, 6, event.is_checkable);
-  sqlite3_bind_int(  stmt, 7, event.is_checked);
+  sqlite3_bind_int64(  stmt, 2, to_unix_seconds(event.start)                       );
+  sqlite3_bind_int64(  stmt, 3, to_unix_seconds(event.end)                         );
+  sqlite3_bind_text(   stmt, 4, event.name.c_str(),          -1, SQLITE_TRANSIENT  );
+  sqlite3_bind_text(   stmt, 5, event.description.c_str(),   -1, SQLITE_TRANSIENT  );
+  sqlite3_bind_int(    stmt, 6, event.is_checkable                                 );
+  sqlite3_bind_int(    stmt, 7, event.is_checked                                   );
+  sqlite3_bind_int(    stmt, 8, +event.status                                      );
 
   rc = sqlite3_step(stmt);
   if (rc != SQLITE_DONE) {
@@ -206,12 +212,18 @@ bool SqliteDb::insert_task(Task &task, uint64_t &event_id) {
 }
 
 std::vector<Event> SqliteDb::fetch_events() {
-	std::vector<Event> result;
+	std::vector<Event> events;
+	fetch_events(events);
+	return events;
+}
+
+void SqliteDb::fetch_events(std::vector<Event> &events) {
+	events.clear();
 
 	last_error_.clear();
 	if (!_db) {
 		last_error_ = "db is not open";
-		return result;
+		return;
 	}
 
 	const char* q = "SELECT * FROM events";
@@ -222,7 +234,7 @@ std::vector<Event> SqliteDb::fetch_events() {
 	int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
 	if (rc != SQLITE_OK) {
     last_error_ = sqlite3_errmsg(_db);
-		return result;
+		return;
 	}
 
 	while (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -236,12 +248,12 @@ std::vector<Event> SqliteDb::fetch_events() {
 		e.is_checkable = sqlite3_column_int(stmt, 5);
 		e.is_checked = sqlite3_column_int(stmt, 6);
 
-		result.push_back(e);
+		events.push_back(e);
 	}
 
 	sqlite3_finalize(stmt);
 
-	return result;
+	return;
 }
 
 std::vector<std::pair<uint64_t, Task>> SqliteDb::fetch_tasks() {
@@ -281,12 +293,17 @@ std::vector<std::pair<uint64_t, Task>> SqliteDb::fetch_tasks() {
 }
 
 std::vector<Task> SqliteDb::fetch_tasks(uint64_t event_id) {
-	std::vector<Task> result;
+	std::vector<Task> tasks;
+	fetch_tasks(event_id, tasks);
+	return tasks;
+}
+void SqliteDb::fetch_tasks(uint64_t event_id, std::vector<Task> &tasks) {
+	tasks.clear();
 
 	last_error_.clear();
 	if (!_db) {
 		last_error_ = "db is not open";
-		return result;
+		return;
 	}
 
 	const char* q = "SELECT * FROM tasks WHERE event_id = ?";
@@ -296,7 +313,7 @@ std::vector<Task> SqliteDb::fetch_tasks(uint64_t event_id) {
 	int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
 	if (rc != SQLITE_OK) {
     last_error_ = sqlite3_errmsg(_db);
-		return result;
+		return;
 	}
 
 	sqlite3_bind_int64(stmt, 1, event_id);
@@ -309,12 +326,12 @@ std::vector<Task> SqliteDb::fetch_tasks(uint64_t event_id) {
 		t.exit_code = sqlite3_column_int(stmt, 3);
 		t.output = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
 
-		result.push_back(t);
+		tasks.push_back(t);
 	}
 
 	sqlite3_finalize(stmt);
 
-	return result;
+	return;
 }
 
 bool auto_insert_event(SqliteDb &db, Event &event) {
@@ -336,13 +353,20 @@ bool auto_insert_events(SqliteDb &db, std::vector<Event> &events) {
 }
 
 std::vector<Event> auto_fetch_events(SqliteDb &db) {
-	std::vector<Event> events = db.fetch_events();
-	if (!db.last_error().empty()) return events;
+	std::vector<Event> events;
+	auto_fetch_events(db, events);
+	return events;
+}
+
+void auto_fetch_events(SqliteDb &db, std::vector<Event> &events) {
+	events.clear();
+
+	db.fetch_events(events);
+	if (!db.last_error().empty()) return;
 	
 	for (auto &event : events) {
 		event.tasks = db.fetch_tasks(event.id);
-		if (!db.last_error().empty()) return events;
+		if (!db.last_error().empty()) return;
 	}
+} 
 
-	return events;
-}

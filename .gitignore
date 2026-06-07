@@ -1,5 +1,6 @@
 obj/
 wtfisthis
-# main
+main
 db.db
 plan.txt
+.ghostcommit.yml

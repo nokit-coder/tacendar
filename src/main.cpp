@@ -1,10 +1,13 @@
-#include "../include/event.h"
-#include "../include/task.h"
-#include "../include/dbManager.h"
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <iostream>
 #include <thread>
+
+#include "../include/event.h"
+#include "../include/task.h"
+#include "../include/dbManager.h"
+#include "../include/daemon.h"
 
 int main() {
 	SqliteDb db("db.db");
@@ -69,11 +72,11 @@ int main() {
 		for (auto& t : e.tasks) {
 			std::cout << "id: " << t.id << '\n';
 			std::cout << "command: " << t.command << '\n';
-			exec_task_thread(t);
 		}
 		std::cout << "-----" << '\n';
 	}
 
+	/*
 	std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
 	// --- wait for all task stop ---
@@ -98,4 +101,10 @@ int main() {
 		std::cout << "last error: <" << db.last_error() << ">" << '\n';
 		return 0;
 	}
+	*/
+
+	// [ TEST DAEMON ]
+	Daemon d(db);
+	d.load_db();
+	d.daemon();
 }

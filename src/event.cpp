@@ -1,14 +1,20 @@
 #include <chrono>
 #include <cstdlib>
 #include <string>
-#include <vector>
 
 #include "../include/event.h"
 
 void Event::exec() const {
-  for (const auto &task : tasks) {
-    std::system(task.command.c_str());
-  }
+	// send notify [ КОСТЫЛЬ ]
+	std::system(("notify-send \"Event: " + name + "\"").c_str());
+}
+
+int operator+(Event::Status s) {
+	return static_cast<int>(s);
+}
+
+bool operator<(const Event &e1, const Event &e2) {
+	return e1.start < e2.start;
 }
 
 int64_t to_unix_seconds(std::chrono::system_clock::time_point tp) {
