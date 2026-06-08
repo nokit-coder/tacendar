@@ -1,6 +1,6 @@
 CXXFLAGS = 
 
-SRCS = main.cpp dbManager.cpp event.cpp task.cpp daemon.cpp
+SRCS = main.cpp dbManager.cpp event.cpp action.cpp daemon.cpp
 OBJS = $(addprefix obj/, $(SRCS:.cpp=.o))
 
 all: main daemon

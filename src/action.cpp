@@ -1,8 +1,8 @@
-#include "../include/task.h"
+#include "../include/action.h"
 
 #include <cstdio>
 
-void Task::exec() {
+void Action::exec() {
 	status = Status::RUNNING;
 
 	FILE* pipe = popen((command + " 2>/dev/null").c_str(), "r");
@@ -16,6 +16,6 @@ void Task::exec() {
   status = Status::PAST;
 }
 
-int operator+(Task::Status s) {
+int operator+(Action::Status s) {
 	return static_cast<int>(s);
 }

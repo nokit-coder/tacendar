@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "task.h"
+#include "action.h"
 
 class Event {
 public:
@@ -23,7 +23,7 @@ public:
   bool is_checkable = false; // is check box available
   bool is_checked = false; // is check box activen
 	Status status = Status::STOPPED;
-  std::vector<Task> tasks;
+  std::vector<Action> actions;
 
   void exec() const;
 };

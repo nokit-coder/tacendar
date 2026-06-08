@@ -5,7 +5,7 @@
 
 #include "../include/dbManager.h"
 #include "../include/event.h"
-#include "../include/task.h"
+#include "../include/action.h"
 
 SqliteDb::SqliteDb(const std::string &filename) { open(filename); }
 
@@ -89,14 +89,15 @@ bool SqliteDb::create_tables() {
     return false;
   }
 
-	// TASKS
+	// ACTIONS
   const char *q2 =
-      "CREATE TABLE IF NOT EXISTS tasks ("
+      "CREATE TABLE IF NOT EXISTS actions ("
       "id INTEGER PRIMARY KEY AUTOINCREMENT,"
       "event_id INTEGER NOT NULL,"
       "command TEXT NOT NULL,"
       "exit_code INTEGER NOT NULL,"
       "output TEXT NOT NULL,"
+      "status INTEGER NOT NULL,"
       "FOREIGN KEY(event_id) REFERENCES events(id)"
       ");";
 
@@ -139,12 +140,12 @@ bool SqliteDb::insert_event(Event &event) {
   } else {
     sqlite3_bind_null(stmt, 1);
   }
-  sqlite3_bind_int64(  stmt, 2, to_unix_seconds(event.start)                       );
-  sqlite3_bind_int64(  stmt, 3, to_unix_seconds(event.end)                         );
-  sqlite3_bind_text(   stmt, 4, event.name.c_str(),          -1, SQLITE_TRANSIENT  );
-  sqlite3_bind_text(   stmt, 5, event.description.c_str(),   -1, SQLITE_TRANSIENT  );
-  sqlite3_bind_int(    stmt, 6, event.is_checkable                                 );
-  sqlite3_bind_int(    stmt, 7, event.is_checked                                   );
+  sqlite3_bind_int64(  stmt, 2,  to_unix_seconds(event.start)                       );
+  sqlite3_bind_int64(  stmt, 3,  to_unix_seconds(event.end)                         );
+  sqlite3_bind_text(   stmt, 4,  event.name.c_str(),          -1, SQLITE_TRANSIENT  );
+  sqlite3_bind_text(   stmt, 5,  event.description.c_str(),   -1, SQLITE_TRANSIENT  );
+  sqlite3_bind_int(    stmt, 6,  event.is_checkable                                 );
+  sqlite3_bind_int(    stmt, 7,  event.is_checked                                   );
   sqlite3_bind_int(    stmt, 8, +event.status                                      );
 
   rc = sqlite3_step(stmt);
@@ -162,7 +163,7 @@ bool SqliteDb::insert_event(Event &event) {
   return true;
 }
 
-bool SqliteDb::insert_task(Task &task, uint64_t &event_id) {
+bool SqliteDb::insert_action(Action &action, uint64_t &event_id) {
   last_error_.clear();
   if (!_db) {
     last_error_ = "db is not open";
@@ -170,7 +171,7 @@ bool SqliteDb::insert_task(Task &task, uint64_t &event_id) {
   }
 
 	const char *q =
-      "INSERT INTO tasks "
+      "INSERT INTO actions "
       "(id, event_id, command, exit_code, output) "
       "VALUES (?, ?, ?, ?, ?)"
       "ON CONFLICT(id) DO UPDATE SET "
@@ -186,15 +187,15 @@ bool SqliteDb::insert_task(Task &task, uint64_t &event_id) {
     return false;
   }
 
-  if (task.id > 0) {
-    sqlite3_bind_int64(stmt, 1, task.id);
+  if (action.id > 0) {
+    sqlite3_bind_int64(stmt, 1, action.id);
   } else {
     sqlite3_bind_null(stmt, 1);
   }
-  sqlite3_bind_int64(stmt, 2, event_id);
-  sqlite3_bind_text( stmt, 3, task.command.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_int(  stmt, 4, task.exit_code);
-  sqlite3_bind_text( stmt, 5, task.output.c_str(),  -1, SQLITE_TRANSIENT);
+  sqlite3_bind_int64(  stmt,  2,  event_id                                        );
+  sqlite3_bind_text(   stmt,  3,  action.command.c_str(),  -1,  SQLITE_TRANSIENT  );
+  sqlite3_bind_int(    stmt,  4,  action.exit_code                                );
+  sqlite3_bind_text(   stmt,  5,  action.output.c_str(),   -1,  SQLITE_TRANSIENT  );
 
   rc = sqlite3_step(stmt);
   if (rc != SQLITE_DONE) {
@@ -203,8 +204,8 @@ bool SqliteDb::insert_task(Task &task, uint64_t &event_id) {
     return false;
   }
 
-	if (task.id == 0) {
-		task.id = sqlite3_last_insert_rowid(_db);
+	if (action.id == 0) {
+		action.id = sqlite3_last_insert_rowid(_db);
 	}
 
   sqlite3_finalize(stmt);
@@ -256,8 +257,8 @@ void SqliteDb::fetch_events(std::vector<Event> &events) {
 	return;
 }
 
-std::vector<std::pair<uint64_t, Task>> SqliteDb::fetch_tasks() {
-	std::vector<std::pair<uint64_t, Task>> result;
+std::vector<std::pair<uint64_t, Action>> SqliteDb::fetch_actions() {
+	std::vector<std::pair<uint64_t, Action>> result;
 
 	last_error_.clear();
 	if (!_db) {
@@ -265,7 +266,7 @@ std::vector<std::pair<uint64_t, Task>> SqliteDb::fetch_tasks() {
 		return result;
 	}
 
-	const char* q = "SELECT * FROM tasks";
+	const char* q = "SELECT * FROM actions";
 
 	sqlite3_stmt* stmt;
 
@@ -276,7 +277,7 @@ std::vector<std::pair<uint64_t, Task>> SqliteDb::fetch_tasks() {
 	}
 
 	while (sqlite3_step(stmt) == SQLITE_ROW) {
-		Task t;
+		Action t;
 
 		t.id = sqlite3_column_int64(stmt, 0);
 		uint64_t event_id = sqlite3_column_int(stmt, 1);
@@ -292,13 +293,13 @@ std::vector<std::pair<uint64_t, Task>> SqliteDb::fetch_tasks() {
 	return result;
 }
 
-std::vector<Task> SqliteDb::fetch_tasks(uint64_t event_id) {
-	std::vector<Task> tasks;
-	fetch_tasks(event_id, tasks);
-	return tasks;
+std::vector<Action> SqliteDb::fetch_actions(uint64_t event_id) {
+	std::vector<Action> result;
+	fetch_actions(event_id, result);
+	return result;
 }
-void SqliteDb::fetch_tasks(uint64_t event_id, std::vector<Task> &tasks) {
-	tasks.clear();
+void SqliteDb::fetch_actions(uint64_t event_id, std::vector<Action> &actions) {
+	actions.clear();
 
 	last_error_.clear();
 	if (!_db) {
@@ -306,7 +307,7 @@ void SqliteDb::fetch_tasks(uint64_t event_id, std::vector<Task> &tasks) {
 		return;
 	}
 
-	const char* q = "SELECT * FROM tasks WHERE event_id = ?";
+	const char* q = "SELECT * FROM actions WHERE event_id = ?";
 
 	sqlite3_stmt* stmt;
 
@@ -319,14 +320,14 @@ void SqliteDb::fetch_tasks(uint64_t event_id, std::vector<Task> &tasks) {
 	sqlite3_bind_int64(stmt, 1, event_id);
 
 	while (sqlite3_step(stmt) == SQLITE_ROW) {
-		Task t;
+		Action t;
 
 		t.id = sqlite3_column_int64(stmt, 0);
 		t.command = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
 		t.exit_code = sqlite3_column_int(stmt, 3);
 		t.output = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
 
-		tasks.push_back(t);
+		actions.push_back(t);
 	}
 
 	sqlite3_finalize(stmt);
@@ -337,8 +338,8 @@ void SqliteDb::fetch_tasks(uint64_t event_id, std::vector<Task> &tasks) {
 bool auto_insert_event(SqliteDb &db, Event &event) {
 	if (!db.insert_event(event)) return false;
 
-	for (auto &task : event.tasks) {
-		if (!db.insert_task(task, event.id)) return false;
+	for (auto &action : event.actions) {
+		if (!db.insert_action(action, event.id)) return false;
 	}
 
 	return true;
@@ -365,7 +366,7 @@ void auto_fetch_events(SqliteDb &db, std::vector<Event> &events) {
 	if (!db.last_error().empty()) return;
 	
 	for (auto &event : events) {
-		event.tasks = db.fetch_tasks(event.id);
+		event.actions = db.fetch_actions(event.id);
 		if (!db.last_error().empty()) return;
 	}
 } 

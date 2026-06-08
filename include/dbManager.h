@@ -7,6 +7,7 @@
 
 #include <sqlite3.h>
 
+#include "action.h"
 #include "event.h"
 
 class SqliteDb {
@@ -24,15 +25,15 @@ public:
   bool create_tables();
 
   bool insert_event(Event &event);
-	bool insert_task(Task &task, uint64_t &event_id);
+	bool insert_action(Action &action, uint64_t &event_id);
 
 	std::vector<Event> fetch_events();
 	void fetch_events(std::vector<Event> &events);
-	// get tasks and they events id
-	std::vector<std::pair<uint64_t, Task>> fetch_tasks(); // idk what pupros of th
-	// get tasks by event_id
-	std::vector<Task> fetch_tasks(uint64_t event_id);
-	void fetch_tasks(uint64_t event_id, std::vector<Task> &tasks);
+	// get actions and they events id
+	std::vector<std::pair<uint64_t, Action>> fetch_actions(); // idk what purpos of th
+	// get actions by event_id
+	std::vector<Action> fetch_actions(uint64_t event_id);
+	void fetch_actions(uint64_t event_id, std::vector<Action> &action);
 
 private:
   sqlite3 *_db = nullptr;

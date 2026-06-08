@@ -2,7 +2,7 @@
 
 #include "dbManager.h"
 #include "event.h"
-#include "task.h"
+#include "action.h"
 #include <thread>
 #include <vector>
 
@@ -30,9 +30,9 @@ private:
   // std::vector<Event> events;
   SqliteDb _db;
 	std::thread daemon_proc;
-	std::thread task_procs;
+	std::thread action_procs;
 
   // void daemon();
 };
 
-void exec_task_in_thread(Task &task);
+void exec_action_in_thread(Action &action);

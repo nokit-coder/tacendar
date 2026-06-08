@@ -5,7 +5,7 @@
 #include <thread>
 
 
-struct Task {
+struct Action {
 	enum class Status {
 		STOPPED,
 		RUNNING,
@@ -21,4 +21,4 @@ struct Task {
 	void exec();
 };
 
-int operator+(Task::Status s);
+int operator+(Action::Status s);

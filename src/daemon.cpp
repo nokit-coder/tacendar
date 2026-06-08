@@ -41,13 +41,13 @@ void Daemon::daemon() {
 			}
 
 			// выполняем задачи внутри текущего активного события
-			for (auto &task : event.tasks) {
-				printf("check task %lu(%i) : \"%s\" : %i : \"%s\"\n", task.id, task.status, task.command.c_str(), task.exit_code, task.output.c_str());
+			for (auto &action : event.actions) {
+				printf("check actions %lu(%i) : \"%s\" : %i : \"%s\"\n", action.id, action.status, action.command.c_str(), action.exit_code, action.output.c_str());
 
-				if (task.status == Task::Status::PAST) { continue; }
-				if (task.status == Task::Status::STOPPED) {
-					printf("execute task\n");
-					exec_task_in_thread(task);
+				if (action.status == Action::Status::PAST) { continue; }
+				if (action.status == Action::Status::STOPPED) {
+					printf("execute action\n");
+					exec_action_in_thread(action);
 					event.status = Event::Status::RUNNING;
 					timer = 0;
 				}
@@ -56,7 +56,7 @@ void Daemon::daemon() {
 			}
 
 			// проверяем завершение всех задач в событии
-			if (!event.tasks.empty() && event.tasks.back().status == Task::Status::PAST) {
+			if (!event.actions.empty() && event.actions.back().status == Action::Status::PAST) {
 				printf("mark event as past\n");
 				event.status = Event::Status::PAST;
 			}		
@@ -80,14 +80,16 @@ void Daemon::daemon() {
 void Daemon::load_db() {
 	events = auto_fetch_events(_db);
 
+	//     FOR TESTING
 	if (!events.empty()) {
 		events.front().start = std::chrono::system_clock::now() + std::chrono::seconds(10);
 	}
+	// END FOR TESTING
 
 	std::sort(events.begin(), events.end());
 }
 
-void exec_task_in_thread(Task &task) {
-	std::thread th(&Task::exec, &task);
+void exec_action_in_thread(Action &action) {
+	std::thread th(&Action::exec, &action);
 	th.detach();
 }
