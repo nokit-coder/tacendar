@@ -18,47 +18,46 @@ void Daemon::daemon() {
 		auto current_time = std::chrono::system_clock::now();
 
 		for (auto &event : events) {
-			printf("check event %s(%i, %i) : \"%s\"\n", event.name.c_str(), event.id, +event.status, event.description.c_str());
+			printf("check event %s(%lu, %i) : \"%s\"\n", event->name.c_str(), event->id, +event->status, event->description.c_str());
 
 			// рассматриваем не прошедшие события
-			if (event.status == Event::Status::PAST) {
+			if (event->status == Event::Status::PAST) {
 				continue; 
 			}
 
-			// пропускаем все будущие события
-			bool time_to_start = (current_time >= event.start && (current_time - event.start) <= std::chrono::seconds(10));
-			bool is_running = (event.status == Event::Status::RUNNING);
+			// пропускаем все будущие события и те которым уже поздно выполняться
+			bool time_to_start = (current_time >= event->start && (current_time - event->start) <= std::chrono::seconds(10));
+			bool is_running = (event->status == Event::Status::RUNNING);
 
 			if (!time_to_start && !is_running) {
 				break; 
 			}
 
 			// основная логика
-			if (event.status == Event::Status::STOPPED) {
+			if (event->status == Event::Status::STOPPED) {
 				printf("execute event\n");
-				event.exec();
-				timer = 0;
 			}
 
 			// выполняем задачи внутри текущего активного события
-			for (auto &action : event.actions) {
-				printf("check actions %lu(%i) : \"%s\" : %i : \"%s\"\n", action.id, action.status, action.command.c_str(), action.exit_code, action.output.c_str());
+			for (auto &action : event->actions) {
+				action->print_debug();
 
-				if (action.status == Action::Status::PAST) { continue; }
-				if (action.status == Action::Status::STOPPED) {
+				if (action->status == Action::Status::PAST) { continue; }
+				if (action->status == Action::Status::STOPPED) {
 					printf("execute action\n");
-					exec_action_in_thread(action);
-					event.status = Event::Status::RUNNING;
-					timer = 0;
+					exec_action_in_thread(*action);
 				}
+
+				event->status = Event::Status::RUNNING;
+				timer = 0;
 
 				break;
 			}
 
 			// проверяем завершение всех задач в событии
-			if (!event.actions.empty() && event.actions.back().status == Action::Status::PAST) {
+			if (!event->actions.empty() && event->actions.back()->status == Action::Status::PAST) {
 				printf("mark event as past\n");
-				event.status = Event::Status::PAST;
+				event->status = Event::Status::PAST;
 			}		
 		}
 
@@ -78,11 +77,11 @@ void Daemon::daemon() {
 }
 
 void Daemon::load_db() {
-	events = auto_fetch_events(_db);
+	auto_fetch_events(_db, events);
 
 	//     FOR TESTING
 	if (!events.empty()) {
-		events.front().start = std::chrono::system_clock::now() + std::chrono::seconds(10);
+		events.front()->start = std::chrono::system_clock::now() + std::chrono::seconds(10);
 	}
 	// END FOR TESTING
 
@@ -90,6 +89,11 @@ void Daemon::load_db() {
 }
 
 void exec_action_in_thread(Action &action) {
-	std::thread th(&Action::exec, &action);
+	std::thread th(
+			[&action]() {
+			action.status = Action::Status::RUNNING;
+			action.exec();
+			action.status = Action::Status::PAST;
+			});
 	th.detach();
 }

@@ -13,9 +13,9 @@ public:
   void load_db();
 	void watchdog();
 
-  void daemon(); // временно на стадии тестирования
+  void daemon();
 
-  std::vector<Event> events;
+  std::vector<std::shared_ptr<Event>> events;
 
 	struct SleepStep { int max_timer; int ms; };
 	static constexpr SleepStep steps[] = {

@@ -1,10 +1,14 @@
 (B) разнести dbManager по файлам +dbManager @refactor
-(C) добавить базовый класс Db и наследования для поддержки разных схем +dbManager @refactor
+(A) добавить базовый класс Db и наследования для поддержки разных схем +dbManager @refactor
 (B) реализовать чекалку для бд и перезапуск демона +daemon @feat
 (C) перенести и настроить взаимодействие с аттрибутами в event.h +event @refactor
-(B) вынести вспомогательные функции в utils @refactor
+(D) вынести вспомогательные функции в utils @refactor
 (A) сохранение бд +daemon @feat
-(A) реализовать задержку для task +Action @feat
-(C) базовый класс Action, наследование +action @refactor
-(C) наследование -> \+возможность интеграции с другими системами +Action @feat
-(A) сохранение статусов action и event +dbManager @feat
+(C) реализовать задержку для action +action @feat
+x 2026-06-11 2026-06-11 базовый класс Action, наследование +action @refactor
+(E) наследование -> \+возможность интеграции с другими системами +action @feat
+x 2026-06-11 2026-06-11 сохранение статусов action и event +dbManager @feat
+(C) разнести actions по файлам +action @refactor
+(B) вынести prepare_stmt в функцию +dbManager @refactor
+(D) добавить ALIAS в sql fetch запросах(т.к. Action и Event ничего не знает про то, что происходит в sql запросах) +dbManager @refactor
+(B) добавить ActionNotify +action @feat

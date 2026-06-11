@@ -1,11 +1,12 @@
-CXXFLAGS = 
+ACXXFLAGS = 
+CXXFLAGS = $(ACXXFLAGS) -std=c++23
 
 SRCS = main.cpp dbManager.cpp event.cpp action.cpp daemon.cpp
 OBJS = $(addprefix obj/, $(SRCS:.cpp=.o))
 
 all: main daemon
 
-main: $(OBJS) | obj
+main: $(OBJS) obj
 	g++ $(CXXFLAGS) $(OBJS) -o main -lsqlite3
 	chmod +x main
 
@@ -14,7 +15,7 @@ daemon:
 obj:
 	mkdir -p obj
 
-obj/%.o: src/%.cpp include/%.h | obj
+obj/%.o: src/%.cpp | obj
 	g++ $(CXXFLAGS) -c $< -o $@
 
 clean:

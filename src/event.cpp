@@ -4,11 +4,6 @@
 
 #include "../include/event.h"
 
-void Event::exec() const {
-	// send notify [ КОСТЫЛЬ ]
-	std::system(("notify-send \"Event: " + name + "\"").c_str());
-}
-
 int operator+(Event::Status s) {
 	return static_cast<int>(s);
 }

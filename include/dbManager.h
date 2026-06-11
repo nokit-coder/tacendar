@@ -27,13 +27,11 @@ public:
   bool insert_event(Event &event);
 	bool insert_action(Action &action, uint64_t &event_id);
 
-	std::vector<Event> fetch_events();
-	void fetch_events(std::vector<Event> &events);
-	// get actions and they events id
-	std::vector<std::pair<uint64_t, Action>> fetch_actions(); // idk what purpos of th
-	// get actions by event_id
-	std::vector<Action> fetch_actions(uint64_t event_id);
-	void fetch_actions(uint64_t event_id, std::vector<Action> &action);
+	std::vector<std::shared_ptr<Event>> fetch_events();
+	bool fetch_events(std::vector<std::shared_ptr<Event>> &events);
+	// fetch actions by event_id
+	std::vector<std::shared_ptr<Action>> fetch_actions(uint64_t event_id);
+	bool fetch_actions(uint64_t event_id, std::vector<std::shared_ptr<Action>> &action);
 
 private:
   sqlite3 *_db = nullptr;
@@ -45,7 +43,7 @@ private:
 };
 
 bool auto_insert_event(SqliteDb &db, Event &event);
-bool auto_insert_events(SqliteDb &db, std::vector<Event> &events);
+bool auto_insert_events(SqliteDb &db, std::vector<std::shared_ptr<Event>> &events);
 
-std::vector<Event> auto_fetch_events(SqliteDb &db);
-void auto_fetch_events(SqliteDb &db, std::vector<Event> &events);
+std::vector<std::shared_ptr<Event>> auto_fetch_events(SqliteDb &db);
+bool auto_fetch_events(SqliteDb &db, std::vector<std::shared_ptr<Event>> &events);

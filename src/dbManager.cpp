@@ -1,11 +1,12 @@
 #include <cstdint>
+#include <memory>
 #include <sqlite3.h>
 #include <string>
 #include <vector>
 
+#include "../include/action.h"
 #include "../include/dbManager.h"
 #include "../include/event.h"
-#include "../include/action.h"
 
 SqliteDb::SqliteDb(const std::string &filename) { open(filename); }
 
@@ -67,39 +68,42 @@ bool SqliteDb::exec(const char sql[]) {
   }
   return true;
 }
-bool SqliteDb::exec(const std::string &sql) {
-	return exec(sql.c_str());
-}
+bool SqliteDb::exec(const std::string &sql) { return exec(sql.c_str()); }
 
 bool SqliteDb::create_tables() {
-	// EVENTS
-  const char *q1 =
-      "CREATE TABLE IF NOT EXISTS events ("
-      "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-      "start_unix INTEGER NOT NULL,"
-      "end_unix INTEGER NOT NULL,"
-      "name TEXT NOT NULL,"
-      "description TEXT NOT NULL,"
-      "is_checkable INTEGER NOT NULL,"
-      "is_checked INTEGER NOT NULL,"
-      "status INTEGER NOT NULL"
-      ");";
+  last_error_.clear();
+  if (!_db) {
+    last_error_ = "db is not open";
+    return false;
+  }
+
+  // EVENTS
+  const char *q1 = "CREATE TABLE IF NOT EXISTS events ("
+                   "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                   "start_unix INTEGER NOT NULL,"
+                   "end_unix INTEGER NOT NULL,"
+                   "name TEXT NOT NULL,"
+                   "description TEXT NOT NULL,"
+                   "is_checkable INTEGER NOT NULL,"
+                   "is_checked INTEGER NOT NULL,"
+                   "status INTEGER NOT NULL"
+                   ");";
 
   if (!exec(q1)) {
     return false;
   }
 
-	// ACTIONS
-  const char *q2 =
-      "CREATE TABLE IF NOT EXISTS actions ("
-      "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-      "event_id INTEGER NOT NULL,"
-      "command TEXT NOT NULL,"
-      "exit_code INTEGER NOT NULL,"
-      "output TEXT NOT NULL,"
-      "status INTEGER NOT NULL,"
-      "FOREIGN KEY(event_id) REFERENCES events(id)"
-      ");";
+  // ACTIONS
+  const char *q2 = "CREATE TABLE IF NOT EXISTS actions ("
+                   "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                   "event_id INTEGER NOT NULL,"
+                   "status INTEGER NOT NULL,"
+                   "type INTEGER NOT NULL,"
+                   "command TEXT NOT NULL DEFAULT '',"
+                   "exit_code INTEGER NOT NULL DEFAULT 0,"
+                   "output TEXT NOT NULL DEFAULT '',"
+                   "FOREIGN KEY(event_id) REFERENCES events(id)"
+                   ");";
 
   if (!exec(q2)) {
     return false;
@@ -115,18 +119,17 @@ bool SqliteDb::insert_event(Event &event) {
     return false;
   }
 
-	const char *q =
-      "INSERT INTO events "
-      "(id, start_unix, end_unix, name, description, is_checkable, is_checked, status) "
-      "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
-      "ON CONFLICT(id) DO UPDATE SET "
-      "start_unix=excluded.start_unix, "
-      "end_unix=excluded.end_unix, "
-      "name=excluded.name, "
-      "description=excluded.description, "
-      "is_checkable=excluded.is_checkable, "
-      "is_checked=excluded.is_checked,"
-      "status=excluded.status;";
+  const char *q = "INSERT INTO events "
+                  "(id, start_unix, end_unix, name, description, is_checkable, is_checked, status) "
+                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+                  "ON CONFLICT(id) DO UPDATE SET "
+                  "start_unix=excluded.start_unix, "
+                  "end_unix=excluded.end_unix, "
+                  "name=excluded.name, "
+                  "description=excluded.description, "
+                  "is_checkable=excluded.is_checkable, "
+                  "is_checked=excluded.is_checked,"
+                  "status=excluded.status;";
 
   sqlite3_stmt *stmt = nullptr;
   int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
@@ -146,7 +149,7 @@ bool SqliteDb::insert_event(Event &event) {
   sqlite3_bind_text(   stmt, 5,  event.description.c_str(),   -1, SQLITE_TRANSIENT  );
   sqlite3_bind_int(    stmt, 6,  event.is_checkable                                 );
   sqlite3_bind_int(    stmt, 7,  event.is_checked                                   );
-  sqlite3_bind_int(    stmt, 8, +event.status                                      );
+  sqlite3_bind_int(    stmt, 8, +event.status                                       );
 
   rc = sqlite3_step(stmt);
   if (rc != SQLITE_DONE) {
@@ -170,15 +173,15 @@ bool SqliteDb::insert_action(Action &action, uint64_t &event_id) {
     return false;
   }
 
-	const char *q =
-      "INSERT INTO actions "
-      "(id, event_id, command, exit_code, output) "
-      "VALUES (?, ?, ?, ?, ?)"
-      "ON CONFLICT(id) DO UPDATE SET "
-      "event_id=excluded.event_id, "
-      "command=excluded.command, "
-      "exit_code=excluded.exit_code, "
-      "output=excluded.output";
+  const char *q = "INSERT INTO actions "
+                  "(id, event_id, status, type, command, exit_code, output) "
+                  "VALUES "
+                  "(:id, :event_id, :status, :type, :command, :exit_code, :output) "
+                  "ON CONFLICT(id) DO UPDATE SET "
+                  "event_id=excluded.event_id, "
+                  "command=excluded.command, "
+                  "exit_code=excluded.exit_code, "
+                  "output=excluded.output";
 
   sqlite3_stmt *stmt = nullptr;
   int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
@@ -187,15 +190,8 @@ bool SqliteDb::insert_action(Action &action, uint64_t &event_id) {
     return false;
   }
 
-  if (action.id > 0) {
-    sqlite3_bind_int64(stmt, 1, action.id);
-  } else {
-    sqlite3_bind_null(stmt, 1);
-  }
-  sqlite3_bind_int64(  stmt,  2,  event_id                                        );
-  sqlite3_bind_text(   stmt,  3,  action.command.c_str(),  -1,  SQLITE_TRANSIENT  );
-  sqlite3_bind_int(    stmt,  4,  action.exit_code                                );
-  sqlite3_bind_text(   stmt,  5,  action.output.c_str(),   -1,  SQLITE_TRANSIENT  );
+	sqlite3_bind_int64(stmt, sqlite3_bind_parameter_index(stmt, ":event_id"), event_id);
+  action.save_to_db(stmt);
 
   rc = sqlite3_step(stmt);
   if (rc != SQLITE_DONE) {
@@ -204,170 +200,162 @@ bool SqliteDb::insert_action(Action &action, uint64_t &event_id) {
     return false;
   }
 
-	if (action.id == 0) {
-		action.id = sqlite3_last_insert_rowid(_db);
-	}
+  if (action.id == 0) {
+    action.id = sqlite3_last_insert_rowid(_db);
+  }
 
   sqlite3_finalize(stmt);
   return true;
 }
 
-std::vector<Event> SqliteDb::fetch_events() {
-	std::vector<Event> events;
+std::vector<std::shared_ptr<Event>> SqliteDb::fetch_events() {
+	std::vector<std::shared_ptr<Event>> events;
 	fetch_events(events);
 	return events;
 }
 
-void SqliteDb::fetch_events(std::vector<Event> &events) {
-	events.clear();
+bool SqliteDb::fetch_events(std::vector<std::shared_ptr<Event>> &events) {
+  events.clear();
 
-	last_error_.clear();
-	if (!_db) {
-		last_error_ = "db is not open";
-		return;
-	}
+  last_error_.clear();
+  if (!_db) {
+    last_error_ = "db is not open";
+    return false;
+  }
 
-	const char* q = "SELECT * FROM events";
-		// "(id, start_unix, end_unix, name, description, is_checkable, is_checked) FROM events"
+  const char *q = "SELECT "
 
-	sqlite3_stmt* stmt;
+									"id, "
+									"start_unix, "
+									"end_unix, "
+									"name, "
+									"description, "
+									"is_checkable, "
+									"is_checked, "
+									"status "
 
-	int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
-	if (rc != SQLITE_OK) {
+									"FROM events;";
+
+  sqlite3_stmt *stmt;
+
+  int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
+  if (rc != SQLITE_OK) {
     last_error_ = sqlite3_errmsg(_db);
-		return;
-	}
+    return false;
+  }
 
-	while (sqlite3_step(stmt) == SQLITE_ROW) {
-		Event e;
+  while (sqlite3_step(stmt) == SQLITE_ROW) {
+    Event e;
 
-		e.id = sqlite3_column_int(stmt, 0);
-		e.start = from_unix_seconds(sqlite3_column_int(stmt, 1));
-		e.end = from_unix_seconds(sqlite3_column_int(stmt, 2));
-		e.name = reinterpret_cast<const char*>((sqlite3_column_text(stmt, 3)));
-		e.description = reinterpret_cast<const char*>((sqlite3_column_text(stmt, 4)));
-		e.is_checkable = sqlite3_column_int(stmt, 5);
-		e.is_checked = sqlite3_column_int(stmt, 6);
+    e.id = sqlite3_column_int(stmt, 0);
+    e.start = from_unix_seconds(sqlite3_column_int(stmt, 1));
+    e.end = from_unix_seconds(sqlite3_column_int(stmt, 2));
+    e.name = reinterpret_cast<const char *>((sqlite3_column_text(stmt, 3)));
+    e.description = reinterpret_cast<const char *>((sqlite3_column_text(stmt, 4)));
+    e.is_checkable = sqlite3_column_int(stmt, 5);
+    e.is_checked = sqlite3_column_int(stmt, 6);
+    e.status = static_cast<Event::Status>(sqlite3_column_int(stmt, 6));
 
-		events.push_back(e);
-	}
+    events.push_back(std::make_shared<Event>(e));
+  }
 
-	sqlite3_finalize(stmt);
+  sqlite3_finalize(stmt);
 
-	return;
+  return true;
 }
 
-std::vector<std::pair<uint64_t, Action>> SqliteDb::fetch_actions() {
-	std::vector<std::pair<uint64_t, Action>> result;
-
-	last_error_.clear();
-	if (!_db) {
-		last_error_ = "db is not open";
-		return result;
-	}
-
-	const char* q = "SELECT * FROM actions";
-
-	sqlite3_stmt* stmt;
-
-	int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
-	if (rc != SQLITE_OK) {
-    last_error_ = sqlite3_errmsg(_db);
-		return result;
-	}
-
-	while (sqlite3_step(stmt) == SQLITE_ROW) {
-		Action t;
-
-		t.id = sqlite3_column_int64(stmt, 0);
-		uint64_t event_id = sqlite3_column_int(stmt, 1);
-		t.command = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
-		t.exit_code = sqlite3_column_int(stmt, 3);
-		t.output = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
-
-		result.push_back({event_id, t});
-	}
-
-	sqlite3_finalize(stmt);
-
-	return result;
+std::vector<std::shared_ptr<Action>> SqliteDb::fetch_actions(uint64_t event_id) {
+	std::vector<std::shared_ptr<Action>> actions;
+	fetch_actions(event_id, actions);
+	return actions;
 }
 
-std::vector<Action> SqliteDb::fetch_actions(uint64_t event_id) {
-	std::vector<Action> result;
-	fetch_actions(event_id, result);
-	return result;
-}
-void SqliteDb::fetch_actions(uint64_t event_id, std::vector<Action> &actions) {
-	actions.clear();
+bool SqliteDb::fetch_actions(uint64_t event_id, std::vector<std::shared_ptr<Action>> &actions) {
+  actions.clear();
 
-	last_error_.clear();
-	if (!_db) {
-		last_error_ = "db is not open";
-		return;
-	}
+  last_error_.clear();
+  if (!_db) {
+    last_error_ = "db is not open";
+    return false;
+  }
 
-	const char* q = "SELECT * FROM actions WHERE event_id = ?";
+  const char *q = "SELECT "
 
-	sqlite3_stmt* stmt;
+									"id, "
+									"type, "
+									"status, "
+									"command, "
+									"exit_code, "
+									"output "
 
-	int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
-	if (rc != SQLITE_OK) {
+									"FROM actions "
+									"WHERE event_id = ?";
+
+  sqlite3_stmt *stmt;
+
+  int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
+  if (rc != SQLITE_OK) {
     last_error_ = sqlite3_errmsg(_db);
-		return;
-	}
+    return false;
+  }
 
-	sqlite3_bind_int64(stmt, 1, event_id);
+  sqlite3_bind_int64(stmt, 1, event_id);
 
-	while (sqlite3_step(stmt) == SQLITE_ROW) {
-		Action t;
+  while (sqlite3_step(stmt) == SQLITE_ROW) {
+    ActionType type = static_cast<ActionType>(sqlite3_column_int(stmt, 1));
 
-		t.id = sqlite3_column_int64(stmt, 0);
-		t.command = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
-		t.exit_code = sqlite3_column_int(stmt, 3);
-		t.output = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
+    std::shared_ptr<Action> a;
 
-		actions.push_back(t);
-	}
+    if (type == ActionType::Command) {
+      a = std::make_shared<ActionCommand>();
+    } else {
+      continue;
+    }
 
-	sqlite3_finalize(stmt);
+    a->load_from_db(stmt);
 
-	return;
+    actions.push_back(a);
+  }
+
+  sqlite3_finalize(stmt);
+
+	return true;
 }
 
 bool auto_insert_event(SqliteDb &db, Event &event) {
-	if (!db.insert_event(event)) return false;
+  if (!db.insert_event(event)) { return false; }
 
-	for (auto &action : event.actions) {
-		if (!db.insert_action(action, event.id)) return false;
-	}
+  for (auto &action : event.actions) {
+    if (!db.insert_action(*action, event.id)) { return false; }
+  }
 
-	return true;
+  return true;
 }
 
-bool auto_insert_events(SqliteDb &db, std::vector<Event> &events) {
-	for (auto &event : events) {
-		if (!auto_insert_event(db, event)) return false;
-	}
+bool auto_insert_events(SqliteDb &db, std::vector<std::shared_ptr<Event>> &events) {
+  for (auto &event : events) {
+    if (!auto_insert_event(db, *event)) { return false; }
+  }
 
-	return true;
+  return true;
 }
 
-std::vector<Event> auto_fetch_events(SqliteDb &db) {
-	std::vector<Event> events;
+std::vector<std::shared_ptr<Event>> auto_fetch_events(SqliteDb &db) {
+	std::vector<std::shared_ptr<Event>> events;
 	auto_fetch_events(db, events);
 	return events;
 }
 
-void auto_fetch_events(SqliteDb &db, std::vector<Event> &events) {
-	events.clear();
+bool auto_fetch_events(SqliteDb &db, std::vector<std::shared_ptr<Event>> &events) {
+  events.clear();
 
-	db.fetch_events(events);
-	if (!db.last_error().empty()) return;
-	
-	for (auto &event : events) {
-		event.actions = db.fetch_actions(event.id);
-		if (!db.last_error().empty()) return;
-	}
-} 
+  db.fetch_events(events);
+  if (!db.last_error().empty()) { return false; }
 
+  for (auto &event : events) {
+    db.fetch_actions(event->id, event->actions);
+    if (!db.last_error().empty()) { return false; }
+  }
+
+	return true;
+}

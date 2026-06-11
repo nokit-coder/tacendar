@@ -23,9 +23,7 @@ public:
   bool is_checkable = false; // is check box available
   bool is_checked = false; // is check box activen
 	Status status = Status::STOPPED;
-  std::vector<Action> actions;
-
-  void exec() const;
+  std::vector<std::shared_ptr<Action>> actions;
 };
 
 int operator+(Event::Status s);
