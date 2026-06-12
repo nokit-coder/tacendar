@@ -1,3 +1,4 @@
+#include <chrono>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -52,7 +53,7 @@ int main() {
 	// events.push_back(std::make_shared<Event>(e));
 
 	// auto a = events[0]->actions[0];
-	// a->exec();
+	// a->status = Action::Status::STOPPED;
 
 	// --- write everything ---
 	// auto_insert_events(db, events);
@@ -61,5 +62,8 @@ int main() {
 	// [ TEST DAEMON ]
 	Daemon d(db);
 	d.load_db();
-	d.daemon();
+	d.start_daemon();
+
+	// ждать 1 минуту
+	std::this_thread::sleep_for(std::chrono::seconds(10));
 }

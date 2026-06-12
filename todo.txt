@@ -1,14 +1,14 @@
 (B) разнести dbManager по файлам +dbManager @refactor
 (A) добавить базовый класс Db и наследования для поддержки разных схем +dbManager @refactor
-(B) реализовать чекалку для бд и перезапуск демона +daemon @feat
-(C) перенести и настроить взаимодействие с аттрибутами в event.h +event @refactor
+(A) реализовать чекалку для бд и перезапуск демона +daemon @feat
 (D) вынести вспомогательные функции в utils @refactor
 x 2026-06-12 2026-06-12 сохранение бд +daemon @feat
 (C) реализовать задержку для action +action @feat
 (E) наследование -> \+возможность интеграции с другими системами +action @feat
 (C) разнести actions по файлам +action @refactor
-(B) вынести prepare_stmt в функцию +dbManager @refactor
+(A) вынести prepare_stmt в функцию +dbManager @refactor
 (D) добавить ALIAS в sql fetch запросах(т.к. Action и Event ничего не знает про то, что происходит в sql запросах) +dbManager @refactor
-(A) добавить ActionNotify +action @feat
+(B) добавить ActionNotify +action @feat
 repeater  абстрактный класс позволяющий создавать повторяющейся event +repeater @idea
 2026-06-12 repeater по дням недели, по дню в месяце, каждый какой-то день(тут еще разновидности) +repeater @idea
+(C) сделать настройку для Daemon::step

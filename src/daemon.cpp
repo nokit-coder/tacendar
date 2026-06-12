@@ -5,16 +5,41 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <iostream>
 #include <thread>
 
 Daemon::Daemon(SqliteDb &db) : _db(db) {}
+
+Daemon::~Daemon() {
+	stop_daemon();
+	for (auto &th : action_procs) {
+		th.join();
+	}
+}
+
+bool Daemon::start_daemon() {
+	if (_is_running == true) { return false; }
+	_is_running = true;
+	std::cout << "starting daemon\n";
+	daemon_proc = std::thread(&Daemon::daemon, this);
+	daemon_proc.detach();
+	return true;
+}
+
+bool Daemon::stop_daemon() {
+	if (_is_running == false) { return false; }
+	_is_running = false;
+	std::cout << "stopping daemon\n";
+	if (daemon_proc.joinable()) { daemon_proc.join(); }
+	return true;
+}
 
 void Daemon::daemon() {
 	load_db();
 
 	int timer = 0;
 
-	while (true) {
+	while (_is_running) {
 		auto current_time = std::chrono::system_clock::now();
 
 		for (auto &event : events) {
@@ -84,7 +109,7 @@ void Daemon::load_db() {
 
 	//     FOR TESTING
 	if (!events.empty()) {
-		events.front()->start = std::chrono::system_clock::now() + std::chrono::seconds(10);
+		events.front()->start = std::chrono::system_clock::now() + std::chrono::seconds(5);
 	}
 	// END FOR TESTING
 
