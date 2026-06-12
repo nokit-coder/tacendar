@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdint>
 #include <cstdio>
 #include <thread>
 
@@ -41,13 +42,15 @@ void Daemon::daemon() {
 			for (auto &action : event->actions) {
 				action->print_debug();
 
+				event->status = Event::Status::RUNNING;
+
 				if (action->status == Action::Status::PAST) { continue; }
 				if (action->status == Action::Status::STOPPED) {
 					printf("execute action\n");
-					exec_action_in_thread(*action);
+					exec_action_in_thread(*action, event->id);
+					_db.insert_event(*event);
 				}
 
-				event->status = Event::Status::RUNNING;
 				timer = 0;
 
 				break;
@@ -57,6 +60,7 @@ void Daemon::daemon() {
 			if (!event->actions.empty() && event->actions.back()->status == Action::Status::PAST) {
 				printf("mark event as past\n");
 				event->status = Event::Status::PAST;
+				auto_insert_event(_db, *event);
 			}		
 		}
 
@@ -87,12 +91,13 @@ void Daemon::load_db() {
 	std::sort(events.begin(), events.end());
 }
 
-void exec_action_in_thread(Action &action) {
+void Daemon::exec_action_in_thread(Action &action, const uint64_t event_id) {
 	std::thread th(
-			[&action]() {
+			[&action, event_id, this]() {
 			action.status = Action::Status::RUNNING;
 			action.exec();
 			action.status = Action::Status::PAST;
+			_db.insert_action(action, event_id);
 			});
 	th.detach();
 }

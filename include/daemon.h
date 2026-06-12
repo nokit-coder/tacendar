@@ -3,6 +3,7 @@
 #include "dbManager.h"
 #include "event.h"
 #include "action.h"
+#include <cstdint>
 #include <thread>
 #include <vector>
 
@@ -30,7 +31,6 @@ private:
 	std::thread daemon_proc;
 	std::thread action_procs;
 
+	void exec_action_in_thread(Action &action, uint64_t event_id);
   // void daemon();
 };
-
-void exec_action_in_thread(Action &action);

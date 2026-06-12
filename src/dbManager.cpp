@@ -166,7 +166,7 @@ bool SqliteDb::insert_event(Event &event) {
   return true;
 }
 
-bool SqliteDb::insert_action(Action &action, uint64_t &event_id) {
+bool SqliteDb::insert_action(Action &action, const uint64_t &event_id) {
   last_error_.clear();
   if (!_db) {
     last_error_ = "db is not open";
@@ -271,7 +271,7 @@ std::vector<std::shared_ptr<Action>> SqliteDb::fetch_actions(uint64_t event_id) 
 	return actions;
 }
 
-bool SqliteDb::fetch_actions(uint64_t event_id, std::vector<std::shared_ptr<Action>> &actions) {
+bool SqliteDb::fetch_actions(const uint64_t event_id, std::vector<std::shared_ptr<Action>> &actions) {
   actions.clear();
 
   last_error_.clear();

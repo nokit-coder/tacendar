@@ -29,14 +29,14 @@ public:
 	// insert event
   bool insert_event(Event &event);
 	// insert action by event id
-	bool insert_action(Action &action, uint64_t &event_id);
+	bool insert_action(Action &action, const uint64_t &event_id);
 
 	// fetch all events
 	std::vector<std::shared_ptr<Event>> fetch_events();
 	bool fetch_events(std::vector<std::shared_ptr<Event>> &events);
 	// fetch actions by event_id
-	std::vector<std::shared_ptr<Action>> fetch_actions(uint64_t event_id);
-	bool fetch_actions(uint64_t event_id, std::vector<std::shared_ptr<Action>> &action);
+	std::vector<std::shared_ptr<Action>> fetch_actions(const uint64_t event_id);
+	bool fetch_actions(const uint64_t event_id, std::vector<std::shared_ptr<Action>> &action);
 
 private:
   sqlite3 *_db = nullptr;

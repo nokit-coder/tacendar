@@ -30,9 +30,9 @@ void Action::save_to_db(sqlite3_stmt *stmt) const {
 	int idx_type   = sqlite3_bind_parameter_index( stmt, ":type"   );
 	int idx_status = sqlite3_bind_parameter_index( stmt, ":status" );
 
-	if ( idx_id > 0     ) { sqlite3_bind_int64( stmt, idx_id,                       id     ) ; }
-	if ( idx_type > 0   ) { sqlite3_bind_int(   stmt, idx_type,                    +type   ) ; }
-	if ( idx_status > 0 ) { sqlite3_bind_int(   stmt, idx_status, static_cast<int>( status )); }
+	if ( idx_id > 0     ) { sqlite3_bind_int64( stmt, idx_id,      id     ); }
+	if ( idx_type > 0   ) { sqlite3_bind_int(   stmt, idx_type,   +type   ); }
+	if ( idx_status > 0 ) { sqlite3_bind_int(   stmt, idx_status, +status ); }
 }
 void ActionCommand::save_to_db(sqlite3_stmt *stmt) const {
   Action::save_to_db(stmt);
@@ -41,9 +41,9 @@ void ActionCommand::save_to_db(sqlite3_stmt *stmt) const {
   int idx_exit = sqlite3_bind_parameter_index( stmt, ":exit_code" );
   int idx_out  = sqlite3_bind_parameter_index( stmt, ":output"    );
 
-  if (idx_cmd > 0)  { sqlite3_bind_text ( stmt, idx_cmd,  command.c_str(), -1, SQLITE_TRANSIENT ); }
-  if (idx_exit > 0) { sqlite3_bind_int  ( stmt, idx_exit, exit_code														  ); }
-  if (idx_out > 0)  { sqlite3_bind_text ( stmt, idx_out,  output.c_str(),  -1, SQLITE_TRANSIENT ); }
+  if ( idx_cmd > 0  ) { sqlite3_bind_text ( stmt, idx_cmd,  command.c_str(), -1, SQLITE_TRANSIENT ); }
+  if ( idx_exit > 0 ) { sqlite3_bind_int  ( stmt, idx_exit, exit_code														  ); }
+  if ( idx_out > 0  ) { sqlite3_bind_text ( stmt, idx_out,  output.c_str(),  -1, SQLITE_TRANSIENT ); }
 }
 
 int operator+(Action::Status s) { return static_cast<int>(s); }

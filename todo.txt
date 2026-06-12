@@ -3,13 +3,12 @@
 (B) реализовать чекалку для бд и перезапуск демона +daemon @feat
 (C) перенести и настроить взаимодействие с аттрибутами в event.h +event @refactor
 (D) вынести вспомогательные функции в utils @refactor
-(A) сохранение бд +daemon @feat
+x 2026-06-12 2026-06-12 сохранение бд +daemon @feat
 (C) реализовать задержку для action +action @feat
 (E) наследование -> \+возможность интеграции с другими системами +action @feat
 (C) разнести actions по файлам +action @refactor
 (B) вынести prepare_stmt в функцию +dbManager @refactor
 (D) добавить ALIAS в sql fetch запросах(т.к. Action и Event ничего не знает про то, что происходит в sql запросах) +dbManager @refactor
 (A) добавить ActionNotify +action @feat
-x 2026-06-12 2026-06-12 сделать Action классом, а event структурой +action +event @refactor
 repeater  абстрактный класс позволяющий создавать повторяющейся event +repeater @idea
 2026-06-12 repeater по дням недели, по дню в месяце, каждый какой-то день(тут еще разновидности) +repeater @idea
