@@ -179,6 +179,7 @@ bool SqliteDb::insert_action(Action &action, uint64_t &event_id) {
                   "(:id, :event_id, :status, :type, :command, :exit_code, :output) "
                   "ON CONFLICT(id) DO UPDATE SET "
                   "event_id=excluded.event_id, "
+                  "status=excluded.status, "
                   "command=excluded.command, "
                   "exit_code=excluded.exit_code, "
                   "output=excluded.output";
