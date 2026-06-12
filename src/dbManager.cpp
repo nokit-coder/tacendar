@@ -255,7 +255,7 @@ bool SqliteDb::fetch_events(std::vector<std::shared_ptr<Event>> &events) {
     e.description = reinterpret_cast<const char *>((sqlite3_column_text(stmt, 4)));
     e.is_checkable = sqlite3_column_int(stmt, 5);
     e.is_checked = sqlite3_column_int(stmt, 6);
-    e.status = static_cast<Event::Status>(sqlite3_column_int(stmt, 6));
+    e.status = static_cast<Event::Status>(sqlite3_column_int(stmt, 7));
 
     events.push_back(std::make_shared<Event>(e));
   }
