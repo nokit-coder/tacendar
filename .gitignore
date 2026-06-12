@@ -4,3 +4,4 @@ main
 db.db
 plan.txt
 .ghostcommit.yml
+.ghostcommit-cache.json

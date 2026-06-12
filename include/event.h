@@ -7,7 +7,7 @@
 
 #include "action.h"
 
-class Event {
+struct Event {
 public:
 	enum class Status {
 		STOPPED,
