@@ -5,10 +5,11 @@
 (D) вынести вспомогательные функции в utils @refactor
 (A) сохранение бд +daemon @feat
 (C) реализовать задержку для action +action @feat
-x 2026-06-11 2026-06-11 базовый класс Action, наследование +action @refactor
 (E) наследование -> \+возможность интеграции с другими системами +action @feat
-x 2026-06-11 2026-06-11 сохранение статусов action и event +dbManager @feat
 (C) разнести actions по файлам +action @refactor
 (B) вынести prepare_stmt в функцию +dbManager @refactor
 (D) добавить ALIAS в sql fetch запросах(т.к. Action и Event ничего не знает про то, что происходит в sql запросах) +dbManager @refactor
-(B) добавить ActionNotify +action @feat
+(A) добавить ActionNotify +action @feat
+(A) сделать Action классом а event структурой +action +event @refactor
+repeater  абстрактный класс позволяющий создавать повторяющейся event +repeater @idea
+2026-06-12 repeater по дням недели, по дню в месяце, каждый какой-то день(тут еще разновидности) +repeater @idea

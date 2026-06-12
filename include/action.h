@@ -7,7 +7,7 @@
 enum class ActionType {
 	Base,
 	Command,
-	Notify,
+	Notify, // future
 };
 
 struct Action {
@@ -25,9 +25,9 @@ struct Action {
 	virtual ~Action() = default;
 
 	virtual void exec() = 0;
-	virtual void print_debug();
 	virtual void save_to_db(sqlite3_stmt* stmt) const;
 	virtual void load_from_db(sqlite3_stmt* stmt);
+	virtual void print_debug();
 };
 
 int operator+(Action::Status s);
@@ -37,9 +37,9 @@ struct ActionCommand : Action {
 	ActionCommand();
 
 	virtual void exec();
-	void print_debug();
 	void save_to_db(sqlite3_stmt* stmt) const;
 	void load_from_db(sqlite3_stmt* stmt);
+	void print_debug();
 
 	std::string command;
 	uint16_t exit_code = 0;

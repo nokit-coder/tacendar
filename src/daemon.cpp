@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
-#include <iostream>
 #include <thread>
 
 Daemon::Daemon(SqliteDb &db) : _db(db) {}
@@ -20,12 +19,12 @@ void Daemon::daemon() {
 		for (auto &event : events) {
 			printf("check event %s(%lu, %i) : \"%s\"\n", event->name.c_str(), event->id, +event->status, event->description.c_str());
 
-			// рассматриваем не прошедшие события
+			// рассматриваем не прошедшие event
 			if (event->status == Event::Status::PAST) {
 				continue; 
 			}
 
-			// пропускаем все будущие события и те которым уже поздно выполняться
+			// пропускаем все будущие event и те которым уже поздно выполняться
 			bool time_to_start = (current_time >= event->start && (current_time - event->start) <= std::chrono::seconds(10));
 			bool is_running = (event->status == Event::Status::RUNNING);
 
@@ -38,7 +37,7 @@ void Daemon::daemon() {
 				printf("execute event\n");
 			}
 
-			// выполняем задачи внутри текущего активного события
+			// выполняем action внутри текущего активного event
 			for (auto &action : event->actions) {
 				action->print_debug();
 
@@ -54,7 +53,7 @@ void Daemon::daemon() {
 				break;
 			}
 
-			// проверяем завершение всех задач в событии
+			// проверяем завершение всех action в событии
 			if (!event->actions.empty() && event->actions.back()->status == Action::Status::PAST) {
 				printf("mark event as past\n");
 				event->status = Event::Status::PAST;

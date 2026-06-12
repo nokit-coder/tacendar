@@ -11,8 +11,6 @@ public:
   Daemon(SqliteDb &db);
 
   void load_db();
-	void watchdog();
-
   void daemon();
 
   std::vector<std::shared_ptr<Event>> events;

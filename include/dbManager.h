@@ -15,18 +15,23 @@ public:
   SqliteDb(const std::string &filename);
   ~SqliteDb();
 
+	// open db
   bool open(const std::string &filename);
 
 	// is db available
   bool ok() const;
+	// get last error
   const std::string &last_error() const;
 
 	// create default tbls
   bool create_tables();
 
+	// insert event
   bool insert_event(Event &event);
+	// insert action by event id
 	bool insert_action(Action &action, uint64_t &event_id);
 
+	// fetch all events
 	std::vector<std::shared_ptr<Event>> fetch_events();
 	bool fetch_events(std::vector<std::shared_ptr<Event>> &events);
 	// fetch actions by event_id
