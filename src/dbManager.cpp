@@ -248,14 +248,14 @@ bool SqliteDb::fetch_events(std::vector<std::shared_ptr<Event>> &events) {
   while (sqlite3_step(stmt) == SQLITE_ROW) {
     Event e;
 
-    e.id           =                                  sqlite3_column_int(  stmt, 0   );
-    e.start        = from_unix_seconds(               sqlite3_column_int(  stmt, 1 ) );
-    e.end          = from_unix_seconds(               sqlite3_column_int(  stmt, 2 ) );
+    e.id           =                                  sqlite3_column_int ( stmt, 0   );
+    e.start        = from_unix_seconds(               sqlite3_column_int ( stmt, 1 ) );
+    e.end          = from_unix_seconds(               sqlite3_column_int ( stmt, 2 ) );
     e.name         = reinterpret_cast<const char *>(( sqlite3_column_text( stmt, 3 )));
     e.description  = reinterpret_cast<const char *>(( sqlite3_column_text( stmt, 4 )));
-    e.is_checkable =                                  sqlite3_column_int(  stmt, 5   );
-    e.is_checked   =                                  sqlite3_column_int(  stmt, 6   );
-    e.status       = static_cast<Event::Status>(      sqlite3_column_int(  stmt, 7 ) );
+    e.is_checkable =                                  sqlite3_column_int ( stmt, 5   );
+    e.is_checked   =                                  sqlite3_column_int ( stmt, 6   );
+    e.status       = static_cast<Event::Status>(      sqlite3_column_int ( stmt, 7 ) );
 
     events.push_back(std::make_shared<Event>(e));
   }
@@ -274,13 +274,21 @@ bool SqliteDb::fetch_next_event(std::shared_ptr<Event> &event, std::time_t now_u
     return false;
   }
 
-  const char *q =
-      "SELECT e.id, e.start_unix, e.end_unix, e.name, e.description, "
-      "e.is_checkable, e.is_checked, e.status "
-      "FROM events AS e "
-      "WHERE (e.status = ? AND e.end_unix >= ?) "
-      "ORDER BY e.start_unix ASC, e.id ASC "
-      "LIMIT 1;";
+  const char *q = "SELECT "
+
+									"id, "
+									"start_unix, "
+									"end_unix, "
+									"name, "
+									"description, "
+									"is_checkable, "
+									"is_checked, "
+									"status "
+
+									"FROM events "
+									"WHERE (status = ? AND end_unix >= ?) "
+									"ORDER BY start_unix ASC, id ASC "
+									"LIMIT 1;";
 
   sqlite3_stmt *stmt = nullptr;
   int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
@@ -296,14 +304,14 @@ bool SqliteDb::fetch_next_event(std::shared_ptr<Event> &event, std::time_t now_u
   if (rc == SQLITE_ROW) {
     Event e;
 
-    e.id           =                                  sqlite3_column_int(  stmt, 0   );
-    e.start        = from_unix_seconds(               sqlite3_column_int(  stmt, 1 ) );
-    e.end          = from_unix_seconds(               sqlite3_column_int(  stmt, 2 ) );
+    e.id           =                                  sqlite3_column_int ( stmt, 0   );
+    e.start        = from_unix_seconds(               sqlite3_column_int ( stmt, 1 ) );
+    e.end          = from_unix_seconds(               sqlite3_column_int ( stmt, 2 ) );
     e.name         = reinterpret_cast<const char *>(( sqlite3_column_text( stmt, 3 )));
     e.description  = reinterpret_cast<const char *>(( sqlite3_column_text( stmt, 4 )));
-    e.is_checkable =                                  sqlite3_column_int(  stmt, 5   );
-    e.is_checked   =                                  sqlite3_column_int(  stmt, 6   );
-    e.status       = static_cast<Event::Status>(      sqlite3_column_int(  stmt, 7 ) );
+    e.is_checkable =                                  sqlite3_column_int ( stmt, 5   );
+    e.is_checked   =                                  sqlite3_column_int ( stmt, 6   );
+    e.status       = static_cast<Event::Status>(      sqlite3_column_int ( stmt, 7 ) );
 
     event = std::make_shared<Event>(std::move(e));
   } else if (rc != SQLITE_DONE) {
@@ -326,12 +334,20 @@ bool SqliteDb::fetch_running_events(std::vector<std::shared_ptr<Event>> &events)
     return false;
   }
 
-  const char *q =
-      "SELECT e.id, e.start_unix, e.end_unix, e.name, e.description, "
-      "e.is_checkable, e.is_checked, e.status "
-      "FROM events AS e "
-      "WHERE (e.status = ?) "
-      "ORDER BY e.start_unix ASC, e.id ASC ";
+  const char *q = "SELECT "
+
+									"id, "
+									"start_unix, "
+									"end_unix, "
+									"name, "
+									"description, "
+									"is_checkable, "
+									"is_checked, "
+									"status "
+
+									"FROM events "
+									"WHERE (status = ?) "
+									"ORDER BY start_unix ASC, id ASC ";
 
   sqlite3_stmt *stmt = nullptr;
   int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
@@ -345,14 +361,14 @@ bool SqliteDb::fetch_running_events(std::vector<std::shared_ptr<Event>> &events)
   while (sqlite3_step(stmt) == SQLITE_ROW) {
     Event e;
 
-    e.id           =                                  sqlite3_column_int(  stmt, 0   );
-    e.start        = from_unix_seconds(               sqlite3_column_int(  stmt, 1 ) );
-    e.end          = from_unix_seconds(               sqlite3_column_int(  stmt, 2 ) );
+    e.id           =                                  sqlite3_column_int ( stmt, 0   );
+    e.start        = from_unix_seconds(               sqlite3_column_int ( stmt, 1 ) );
+    e.end          = from_unix_seconds(               sqlite3_column_int ( stmt, 2 ) );
     e.name         = reinterpret_cast<const char *>(( sqlite3_column_text( stmt, 3 )));
     e.description  = reinterpret_cast<const char *>(( sqlite3_column_text( stmt, 4 )));
-    e.is_checkable =                                  sqlite3_column_int(  stmt, 5   );
-    e.is_checked   =                                  sqlite3_column_int(  stmt, 6   );
-    e.status       = static_cast<Event::Status>(      sqlite3_column_int(  stmt, 7 ) );
+    e.is_checkable =                                  sqlite3_column_int ( stmt, 5   );
+    e.is_checked   =                                  sqlite3_column_int ( stmt, 6   );
+    e.status       = static_cast<Event::Status>(      sqlite3_column_int ( stmt, 7 ) );
 
     events.push_back(std::make_shared<Event>(e));
   }
