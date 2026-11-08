@@ -6,3 +6,4 @@ x 2026-06-08 2026-06-08 переименовать task -> action +task +action 
 x 2026-06-11 2026-06-11 базовый класс Action, наследование +action @refactor
 x 2026-06-11 2026-06-11 сохранение статусов action и event +dbManager @feat
 x 2026-06-12 2026-06-12 сделать Action классом, а event структурой +action +event @refactor
+x 2026-06-12 2026-06-12 сохранение бд +daemon @feat

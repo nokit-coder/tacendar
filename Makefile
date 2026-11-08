@@ -1,5 +1,5 @@
 ACXXFLAGS = 
-CXXFLAGS = $(ACXXFLAGS) -std=c++23
+CXXFLAGS = $(ACXXFLAGS) -std=c++23 -lsqlite3 -Iinclude
 
 SRCS = main.cpp dbManager.cpp event.cpp action.cpp daemon.cpp
 OBJS = $(addprefix obj/, $(SRCS:.cpp=.o))
