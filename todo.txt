@@ -21,3 +21,4 @@ x 2026-06-13 2026-06-13 оператор == +action @feat
 2026-11-08 repeater по дням в месяце может хранить дни одном int и получать из битов +repeater @idea
 (A) 2026-11-08 норм названия для статусов +action +event @refactor
 (A) 2026-11-08 добавить event.next. Это следующее время начала event(для возможности добавить repeater) +event @feat
+(A) 2026-11-08 разнести threadPool по файлам(.h, .cpp) +threadPool @refactor

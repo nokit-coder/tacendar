@@ -114,8 +114,9 @@ void Daemon::daemon() {
 		}
 
 		if (!_is_running) { break; }
-		if (_db_changed)  { _db_changed = false; std::println("db changed"); continue; }
+		if (_db_changed)  { continue; }
 
+		if (event == nullptr) { continue; }
 
 		// выполнение event
 	 	std::println("check event {}({}, {}) : \"{}\"", event->name, event->id, +event->status, event->description); // DEBUG
@@ -150,7 +151,7 @@ void Daemon::daemon() {
 		if (event->actions.empty() || event->actions.back()->status == Action::Status::PAST) {
 			std::println("mark event as past"); // DEBUG
 			event->status = Event::Status::PAST;
-			if (_db.insert_event(*event)) {
+			if (!_db.insert_event(*event)) {
 				std::println("fuck... failed to update event: {}", _db.last_error());
 			}
 		}
