@@ -92,8 +92,12 @@ void Daemon::daemon() {
 		// поиск ближайшего event дял обработки
 		std::shared_ptr<Event> event;
 		if (!_db.fetch_next_event(event, to_unix_seconds(now))) {
-			std::println(std::cerr, "failed to fetch next event: {}", _db.last_error());
+			std::println("failed to fetch next event: {}", _db.last_error());
 			continue;
+		}
+
+		if (event) {
+			_db.fetch_actions(event->id, event->actions);
 		}
 
 		// ожидание
@@ -140,9 +144,6 @@ void Daemon::daemon() {
 				exec_action_in_thread(action, event->id);
 			}
 
-			// if (event->status == Event::Status::RUNNING)
-			// event->status = Event::Status::RUNNING;
-
 			// break;
 		}
 
@@ -153,58 +154,22 @@ void Daemon::daemon() {
 				std::println("fuck... failed to update event: {}", _db.last_error());
 			}
 		}
-
-		// std::this_thread::sleep_for(std::chrono::milliseconds(1500));
 	}
 }
 
 void Daemon::watchdog() {
-	// while (_is_running) {
-	// 	std::vector<std::shared_ptr<Event>> db_events;
-	// 	auto_fetch_events(_db, db_events);
-	//
-	// 	{
-	// 		// анализ diff с памятью
-	// 		std::lock_guard<std::mutex> lock(_mutex);
-	//
-	// 		_events.clear();
-	//
-	// 		for (auto &db_event : db_events) {
-	// 			if (db_event->status == Event::Status::PAST) { continue; }
-	//
-	// 			_events.push_back(std::make_shared<Event>(*db_event));
-	// 		}
-	//
-	// 		_db_changed = true;
-	// 		cv.notify_one();
-	//
-	// 	}
-	//
-	// 	std::this_thread::sleep_for(std::chrono::seconds(5));
-	// }
 }
 
 void Daemon::load_db() {
-	// auto_fetch_events(_db, _events);
-	//
-	// //     FOR TESTING
-	// if (!_events.empty()) {
-	// 	_events.front()->start = std::chrono::system_clock::now() + std::chrono::seconds(5);
-	// 	_events.front()->end = std::chrono::system_clock::now() + std::chrono::seconds(10);
-	// 	_db.insert_event(*_events.front());
-	// }
-	// // END FOR TESTING
-	//
-	// std::sort(_events.begin(), _events.end());
 }
 
 void Daemon::exec_action_in_thread(std::shared_ptr<Action> action, const uint64_t event_id) {
 	action_procs.enqueue([this, action, event_id]() {
-		std::println("executing action in thread");
+		std::println("executing action in thread"); // DEBUG
 
 		action->exec();
 
-		std::println("done executing action in thread");
+		std::println("done executing action in thread"); // DEBUG
 
 		{
 			std::lock_guard<std::mutex> lock(this->_mutex);

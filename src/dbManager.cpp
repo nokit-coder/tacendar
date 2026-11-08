@@ -294,17 +294,17 @@ bool SqliteDb::fetch_next_event(std::shared_ptr<Event> &event, std::time_t now_u
 
   rc = sqlite3_step(stmt);
   if (rc == SQLITE_ROW) {
-    Event e{};
-    e.id = static_cast<uint64_t>(sqlite3_column_int64(stmt, 0));
-    e.start = from_unix_seconds(sqlite3_column_int64(stmt, 1));
-    e.end = from_unix_seconds(sqlite3_column_int64(stmt, 2));
-    const auto *name = sqlite3_column_text(stmt, 3);
-    const auto *description = sqlite3_column_text(stmt, 4);
-    e.name = name ? reinterpret_cast<const char *>(name) : "";
-    e.description = description ? reinterpret_cast<const char *>(description) : "";
-    e.is_checkable = sqlite3_column_int(stmt, 5) != 0;
-    e.is_checked = sqlite3_column_int(stmt, 6) != 0;
-    e.status = static_cast<Event::Status>(sqlite3_column_int(stmt, 7));
+    Event e;
+
+    e.id           =                                  sqlite3_column_int(  stmt, 0   );
+    e.start        = from_unix_seconds(               sqlite3_column_int(  stmt, 1 ) );
+    e.end          = from_unix_seconds(               sqlite3_column_int(  stmt, 2 ) );
+    e.name         = reinterpret_cast<const char *>(( sqlite3_column_text( stmt, 3 )));
+    e.description  = reinterpret_cast<const char *>(( sqlite3_column_text( stmt, 4 )));
+    e.is_checkable =                                  sqlite3_column_int(  stmt, 5   );
+    e.is_checked   =                                  sqlite3_column_int(  stmt, 6   );
+    e.status       = static_cast<Event::Status>(      sqlite3_column_int(  stmt, 7 ) );
+
     event = std::make_shared<Event>(std::move(e));
   } else if (rc != SQLITE_DONE) {
     _last_error = sqlite3_errmsg(_db);
@@ -314,10 +314,6 @@ bool SqliteDb::fetch_next_event(std::shared_ptr<Event> &event, std::time_t now_u
 
   sqlite3_finalize(stmt);
 
-  if (event && !fetch_actions(event->id, event->actions)) {
-    event.reset();
-    return false;
-  }
   return true;
 }
 
