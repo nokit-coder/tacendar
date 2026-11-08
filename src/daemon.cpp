@@ -66,9 +66,8 @@ void Daemon::daemon() {
 			if (_db.fetch_running_events(events)) {
 				for (auto event : events) {
 					std::println("check running event {}({}, {}) : \"{}\"", event->name, event->id, +event->status, event->description); // DEBUG
-					std::vector<std::shared_ptr<Action>> actions;
-					_db.fetch_actions(event->id, actions);
-					for (auto action : actions) {
+					_db.fetch_actions(event->id, event->actions);
+					for (auto action : event->actions) {
 						if (action->status == Action::Status::STOPPED) {
 							action->status = Action::Status::RUNNING;
 							if (!_db.insert_action(*action, event->id)) {
@@ -79,7 +78,7 @@ void Daemon::daemon() {
 						}
 					}
 
-					if (actions.back()->status == Action::Status::PAST || actions.empty()) {
+					if (event->actions.empty() || event->actions.back()->status == Action::Status::PAST) {
 						std::println("mark event as past"); // DEBUG
 						event->status = Event::Status::PAST;
 						if (!_db.insert_event(*event)) {
