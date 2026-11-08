@@ -4,9 +4,9 @@
 #include <string>
 #include <vector>
 
-#include "../include/action.h"
-#include "../include/dbManager.h"
-#include "../include/event.h"
+#include "action.h"
+#include "dbManager.h"
+#include "event.h"
 
 SqliteDb::SqliteDb(const std::string &filename) { open(filename); }
 
@@ -18,7 +18,7 @@ SqliteDb::~SqliteDb() {
 }
 
 bool SqliteDb::open(const std::string &filename) {
-  last_error_.clear();
+  _last_error.clear();
 
   if (_db) {
     sqlite3_close(_db);
@@ -28,11 +28,11 @@ bool SqliteDb::open(const std::string &filename) {
   int rc = sqlite3_open(filename.c_str(), &_db);
   if (rc != SQLITE_OK) {
     if (_db) {
-      last_error_ = sqlite3_errmsg(_db);
+      _last_error = sqlite3_errmsg(_db);
       sqlite3_close(_db);
       _db = nullptr;
     } else {
-      last_error_ = "sqlite3_open failed";
+      _last_error = "sqlite3_open failed";
     }
     return false;
   }
@@ -42,12 +42,12 @@ bool SqliteDb::open(const std::string &filename) {
 
 bool SqliteDb::ok() const { return _db != nullptr; }
 
-const std::string &SqliteDb::last_error() const { return last_error_; }
+const std::string &SqliteDb::last_error() const { return _last_error; }
 
 bool SqliteDb::exec(const char sql[]) {
-  last_error_.clear();
+  _last_error.clear();
   if (!_db) {
-    last_error_ = "db is not open";
+    _last_error = "db is not open";
     return false;
   }
 
@@ -55,10 +55,10 @@ bool SqliteDb::exec(const char sql[]) {
   int rc = sqlite3_exec(_db, sql, nullptr, nullptr, &err);
   if (rc != SQLITE_OK) {
     if (err) {
-      last_error_ = err;
+      _last_error = err;
       sqlite3_free(err);
     } else {
-      last_error_ = sqlite3_errmsg(_db);
+      _last_error = sqlite3_errmsg(_db);
     }
     return false;
   }
@@ -71,9 +71,9 @@ bool SqliteDb::exec(const char sql[]) {
 bool SqliteDb::exec(const std::string &sql) { return exec(sql.c_str()); }
 
 bool SqliteDb::create_tables() {
-  last_error_.clear();
+  _last_error.clear();
   if (!_db) {
-    last_error_ = "db is not open";
+    _last_error = "db is not open";
     return false;
   }
 
@@ -113,9 +113,9 @@ bool SqliteDb::create_tables() {
 }
 
 bool SqliteDb::insert_event(Event &event) {
-  last_error_.clear();
+  _last_error.clear();
   if (!_db) {
-    last_error_ = "db is not open";
+    _last_error = "db is not open";
     return false;
   }
 
@@ -134,7 +134,7 @@ bool SqliteDb::insert_event(Event &event) {
   sqlite3_stmt *stmt = nullptr;
   int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
   if (rc != SQLITE_OK) {
-    last_error_ = sqlite3_errmsg(_db);
+    _last_error = sqlite3_errmsg(_db);
     return false;
   }
 
@@ -153,7 +153,7 @@ bool SqliteDb::insert_event(Event &event) {
 
   rc = sqlite3_step(stmt);
   if (rc != SQLITE_DONE) {
-    last_error_ = sqlite3_errmsg(_db);
+    _last_error = sqlite3_errmsg(_db);
     sqlite3_finalize(stmt);
     return false;
   }
@@ -167,9 +167,9 @@ bool SqliteDb::insert_event(Event &event) {
 }
 
 bool SqliteDb::insert_action(Action &action, const uint64_t &event_id) {
-  last_error_.clear();
+  _last_error.clear();
   if (!_db) {
-    last_error_ = "db is not open";
+    _last_error = "db is not open";
     return false;
   }
 
@@ -187,7 +187,7 @@ bool SqliteDb::insert_action(Action &action, const uint64_t &event_id) {
   sqlite3_stmt *stmt = nullptr;
   int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
   if (rc != SQLITE_OK) {
-    last_error_ = sqlite3_errmsg(_db);
+    _last_error = sqlite3_errmsg(_db);
     return false;
   }
 
@@ -196,7 +196,7 @@ bool SqliteDb::insert_action(Action &action, const uint64_t &event_id) {
 
   rc = sqlite3_step(stmt);
   if (rc != SQLITE_DONE) {
-    last_error_ = sqlite3_errmsg(_db);
+    _last_error = sqlite3_errmsg(_db);
     sqlite3_finalize(stmt);
     return false;
   }
@@ -218,9 +218,9 @@ std::vector<std::shared_ptr<Event>> SqliteDb::fetch_events() {
 bool SqliteDb::fetch_events(std::vector<std::shared_ptr<Event>> &events) {
   events.clear();
 
-  last_error_.clear();
+  _last_error.clear();
   if (!_db) {
-    last_error_ = "db is not open";
+    _last_error = "db is not open";
     return false;
   }
 
@@ -241,21 +241,21 @@ bool SqliteDb::fetch_events(std::vector<std::shared_ptr<Event>> &events) {
 
   int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
   if (rc != SQLITE_OK) {
-    last_error_ = sqlite3_errmsg(_db);
+    _last_error = sqlite3_errmsg(_db);
     return false;
   }
 
   while (sqlite3_step(stmt) == SQLITE_ROW) {
     Event e;
 
-    e.id = sqlite3_column_int(stmt, 0);
-    e.start = from_unix_seconds(sqlite3_column_int(stmt, 1));
-    e.end = from_unix_seconds(sqlite3_column_int(stmt, 2));
-    e.name = reinterpret_cast<const char *>((sqlite3_column_text(stmt, 3)));
-    e.description = reinterpret_cast<const char *>((sqlite3_column_text(stmt, 4)));
-    e.is_checkable = sqlite3_column_int(stmt, 5);
-    e.is_checked = sqlite3_column_int(stmt, 6);
-    e.status = static_cast<Event::Status>(sqlite3_column_int(stmt, 7));
+    e.id           =                                  sqlite3_column_int(  stmt, 0   );
+    e.start        = from_unix_seconds(               sqlite3_column_int(  stmt, 1 ) );
+    e.end          = from_unix_seconds(               sqlite3_column_int(  stmt, 2 ) );
+    e.name         = reinterpret_cast<const char *>(( sqlite3_column_text( stmt, 3 )));
+    e.description  = reinterpret_cast<const char *>(( sqlite3_column_text( stmt, 4 )));
+    e.is_checkable =                                  sqlite3_column_int(  stmt, 5   );
+    e.is_checked   =                                  sqlite3_column_int(  stmt, 6   );
+    e.status       = static_cast<Event::Status>(      sqlite3_column_int(  stmt, 7 ) );
 
     events.push_back(std::make_shared<Event>(e));
   }
@@ -263,6 +263,107 @@ bool SqliteDb::fetch_events(std::vector<std::shared_ptr<Event>> &events) {
   sqlite3_finalize(stmt);
 
   return true;
+}
+
+bool SqliteDb::fetch_next_event(std::shared_ptr<Event> &event, std::time_t now_unix) {
+  event.reset();
+  _last_error.clear();
+
+  if (!_db) {
+    _last_error = "db is not open";
+    return false;
+  }
+
+  const char *q =
+      "SELECT e.id, e.start_unix, e.end_unix, e.name, e.description, "
+      "e.is_checkable, e.is_checked, e.status "
+      "FROM events AS e "
+      "WHERE (e.status = ? AND e.end_unix >= ?) "
+      "ORDER BY e.start_unix ASC, e.id ASC "
+      "LIMIT 1;";
+
+  sqlite3_stmt *stmt = nullptr;
+  int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
+  if (rc != SQLITE_OK) {
+    _last_error = sqlite3_errmsg(_db);
+    return false;
+  }
+
+  sqlite3_bind_int(   stmt, 1, static_cast<int>( Event::Status::STOPPED ));
+  sqlite3_bind_int64( stmt, 2, static_cast<sqlite3_int64>( now_unix     ));
+
+  rc = sqlite3_step(stmt);
+  if (rc == SQLITE_ROW) {
+    Event e{};
+    e.id = static_cast<uint64_t>(sqlite3_column_int64(stmt, 0));
+    e.start = from_unix_seconds(sqlite3_column_int64(stmt, 1));
+    e.end = from_unix_seconds(sqlite3_column_int64(stmt, 2));
+    const auto *name = sqlite3_column_text(stmt, 3);
+    const auto *description = sqlite3_column_text(stmt, 4);
+    e.name = name ? reinterpret_cast<const char *>(name) : "";
+    e.description = description ? reinterpret_cast<const char *>(description) : "";
+    e.is_checkable = sqlite3_column_int(stmt, 5) != 0;
+    e.is_checked = sqlite3_column_int(stmt, 6) != 0;
+    e.status = static_cast<Event::Status>(sqlite3_column_int(stmt, 7));
+    event = std::make_shared<Event>(std::move(e));
+  } else if (rc != SQLITE_DONE) {
+    _last_error = sqlite3_errmsg(_db);
+    sqlite3_finalize(stmt);
+    return false;
+  }
+
+  sqlite3_finalize(stmt);
+
+  if (event && !fetch_actions(event->id, event->actions)) {
+    event.reset();
+    return false;
+  }
+  return true;
+}
+
+bool SqliteDb::fetch_running_events(std::vector<std::shared_ptr<Event>> &events) {
+  events.clear();
+  _last_error.clear();
+
+  if (!_db) {
+    _last_error = "db is not open";
+    return false;
+  }
+
+  const char *q =
+      "SELECT e.id, e.start_unix, e.end_unix, e.name, e.description, "
+      "e.is_checkable, e.is_checked, e.status "
+      "FROM events AS e "
+      "WHERE (e.status = ?) "
+      "ORDER BY e.start_unix ASC, e.id ASC ";
+
+  sqlite3_stmt *stmt = nullptr;
+  int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
+  if (rc != SQLITE_OK) {
+    _last_error = sqlite3_errmsg(_db);
+    return false;
+  }
+
+  sqlite3_bind_int(   stmt, 1, static_cast<int>( Event::Status::RUNNING ));
+
+  while (sqlite3_step(stmt) == SQLITE_ROW) {
+    Event e;
+
+    e.id           =                                  sqlite3_column_int(  stmt, 0   );
+    e.start        = from_unix_seconds(               sqlite3_column_int(  stmt, 1 ) );
+    e.end          = from_unix_seconds(               sqlite3_column_int(  stmt, 2 ) );
+    e.name         = reinterpret_cast<const char *>(( sqlite3_column_text( stmt, 3 )));
+    e.description  = reinterpret_cast<const char *>(( sqlite3_column_text( stmt, 4 )));
+    e.is_checkable =                                  sqlite3_column_int(  stmt, 5   );
+    e.is_checked   =                                  sqlite3_column_int(  stmt, 6   );
+    e.status       = static_cast<Event::Status>(      sqlite3_column_int(  stmt, 7 ) );
+
+    events.push_back(std::make_shared<Event>(e));
+  }
+
+  sqlite3_finalize(stmt);
+
+	return true;
 }
 
 std::vector<std::shared_ptr<Action>> SqliteDb::fetch_actions(uint64_t event_id) {
@@ -274,9 +375,9 @@ std::vector<std::shared_ptr<Action>> SqliteDb::fetch_actions(uint64_t event_id) 
 bool SqliteDb::fetch_actions(const uint64_t event_id, std::vector<std::shared_ptr<Action>> &actions) {
   actions.clear();
 
-  last_error_.clear();
+  _last_error.clear();
   if (!_db) {
-    last_error_ = "db is not open";
+    _last_error = "db is not open";
     return false;
   }
 
@@ -296,7 +397,7 @@ bool SqliteDb::fetch_actions(const uint64_t event_id, std::vector<std::shared_pt
 
   int rc = sqlite3_prepare_v2(_db, q, -1, &stmt, nullptr);
   if (rc != SQLITE_OK) {
-    last_error_ = sqlite3_errmsg(_db);
+    _last_error = sqlite3_errmsg(_db);
     return false;
   }
 
