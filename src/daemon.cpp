@@ -5,6 +5,7 @@
 
 #include <condition_variable>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <iostream>
@@ -93,10 +94,9 @@ void Daemon::daemon() {
 		std::shared_ptr<Event> event;
 		if (!_db.fetch_next_event(event, to_unix_seconds(now))) {
 			std::println("failed to fetch next event: {}", _db.last_error());
-			continue;
 		}
 
-		if (event) {
+		if (event != nullptr) {
 			_db.fetch_actions(event->id, event->actions);
 		}
 
