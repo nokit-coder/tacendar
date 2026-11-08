@@ -2,11 +2,12 @@
 #include <cstdlib>
 #include <iostream>
 #include <memory>
+#include <print>
 
-#include "../include/event.h"
-#include "../include/action.h"
-#include "../include/dbManager.h"
-#include "../include/daemon.h"
+#include "event.h"
+#include "action.h"
+#include "dbManager.h"
+#include "daemon.h"
 
 SqliteDb db("db.db");
 
@@ -42,9 +43,11 @@ int main() {
 	// }
 
 	// auto e = events[0];
-	// auto a = std::make_shared<ActionCommand>();
-	// a->command = "notify-send 'Hello World!'";
-	// e->actions.push_back(a);
+	Event e;
+	auto a = std::make_shared<ActionCommand>();
+	a->command = "notify-send 'Hello World!'";
+	e.actions.push_back(a);
+	// auto_insert_event(db, e);
 	
 	// Event e;
 	// e.name = "test";
@@ -61,9 +64,33 @@ int main() {
 
 	// [ TEST DAEMON ]
 	Daemon d(db);
-	d.load_db();
+	// std::this_thread::sleep_for(std::chrono::seconds(1));
 	d.start_daemon();
 
-	// ждать 1 минуту
+	std::this_thread::sleep_for(std::chrono::seconds(2));
+
+	std::println("e1");
+	e.start = std::chrono::system_clock::now() + std::chrono::seconds(4);
+	e.end = std::chrono::system_clock::now() + std::chrono::seconds(9);
+	auto_insert_event(db, e);
+
+	std::println("notify");
+	d.cv.notify_one();
+	
+	// std::this_thread::sleep_for(std::chrono::seconds(10));
+	//
+	// std::println("e2");
+	// e.id = 0;
+	// e.start = std::chrono::system_clock::now() + std::chrono::seconds(5);
+	// e.end = std::chrono::system_clock::now() + std::chrono::seconds(10);
+	// auto_insert_event(db, e);
+	//
+	// std::this_thread::sleep_for(std::chrono::seconds(10));
+	//
+	// std::println("e3");
+	// e.start = std::chrono::system_clock::now() + std::chrono::seconds(5);
+	// e.end = std::chrono::system_clock::now() + std::chrono::seconds(10);
+	// auto_insert_event(db, e);
+
 	std::this_thread::sleep_for(std::chrono::seconds(10));
 }

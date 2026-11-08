@@ -1,128 +1,223 @@
-#include "../include/daemon.h"
-#include "../include/dbManager.h"
+#include "daemon.h"
+#include "action.h"
+#include "dbManager.h"
+#include "event.h"
 
-#include <algorithm>
+#include <condition_variable>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <iostream>
+#include <memory>
+#include <mutex>
 #include <thread>
+#include <print>
+#include <vector>
 
 Daemon::Daemon(SqliteDb &db) : _db(db) {}
 
 Daemon::~Daemon() {
 	stop_daemon();
-	for (auto &th : action_procs) {
-		th.join();
-	}
 }
 
 bool Daemon::start_daemon() {
 	if (_is_running == true) { return false; }
+	std::println(std::cout, "starting daemon");
 	_is_running = true;
-	std::cout << "starting daemon\n";
-	daemon_proc = std::thread(&Daemon::daemon, this);
-	daemon_proc.detach();
+	daemon_proc = std::jthread(&Daemon::daemon, this);
+	watchdog_proc = std::jthread(&Daemon::watchdog, this);
 	return true;
 }
 
 bool Daemon::stop_daemon() {
 	if (_is_running == false) { return false; }
+	std::println(std::cout, "stopping daemon");
 	_is_running = false;
-	std::cout << "stopping daemon\n";
+	cv.notify_one();
 	if (daemon_proc.joinable()) { daemon_proc.join(); }
+	if (watchdog_proc.joinable()) { watchdog_proc.join(); }
 	return true;
 }
 
 void Daemon::daemon() {
-	load_db();
-
-	int timer = 0;
-
 	while (_is_running) {
-		auto current_time = std::chrono::system_clock::now();
+		// если база проблема с action и база не изменилась скипаем
+		// поиск ближайшего event
 
-		for (auto &event : events) {
-			printf("check event %s(%lu, %i) : \"%s\"\n", event->name.c_str(), event->id, +event->status, event->description.c_str());
+		// ожидание
+		// если прерывание
+		// - база изменилась
+		// - завершение демона
+		// - action завершился
+		
+		// обработка event
 
-			// рассматриваем не прошедшие event
-			if (event->status == Event::Status::PAST) {
-				continue; 
+		if (!_is_running) { break; }
+		if (_db_changed) { _db_changed = false; std::println("db changed"); }
+
+		auto now = std::chrono::system_clock::now();
+
+		std::unique_lock<std::mutex> lock(_mutex);
+
+		// обработка всех running event
+		{
+			std::vector<std::shared_ptr<Event>> events;
+			if (_db.fetch_running_events(events)) {
+				for (auto event : events) {
+					std::println("check running event {}({}, {}) : \"{}\"", event->name, event->id, +event->status, event->description); // DEBUG
+					std::vector<std::shared_ptr<Action>> actions;
+					_db.fetch_actions(event->id, actions);
+					for (auto action : actions) {
+						if (action->status == Action::Status::STOPPED) {
+							action->status = Action::Status::RUNNING;
+							if (!_db.insert_action(*action, event->id)) {
+								std::println("fuck... failed to update action: {}", _db.last_error());
+								continue;
+							}
+							exec_action_in_thread(action, event->id);
+						}
+					}
+
+					if (actions.back()->status == Action::Status::PAST || actions.empty()) {
+						std::println("mark event as past"); // DEBUG
+						event->status = Event::Status::PAST;
+						if (!_db.insert_event(*event)) {
+							std::println("fuck... failed to update event: {}", _db.last_error());
+						}
+					}
+				}
 			}
+		}
 
-			// пропускаем все будущие event и те которым уже поздно выполняться
-			bool time_to_start = (current_time >= event->start && (current_time - event->start) <= std::chrono::seconds(10));
-			bool is_running = (event->status == Event::Status::RUNNING);
+		// поиск ближайшего event дял обработки
+		std::shared_ptr<Event> event;
+		if (!_db.fetch_next_event(event, to_unix_seconds(now))) {
+			std::println(std::cerr, "failed to fetch next event: {}", _db.last_error());
+			continue;
+		}
 
-			if (!time_to_start && !is_running) {
-				break; 
-			}
+		// ожидание
+		if (event != nullptr) {
+			std::println("wait start"); // DEBUG
+			cv.wait_until(lock, event->start);
+			std::println("wait end"); // DEBUG
+		} else {
+			// бесконечный сон
+			std::println("sleep start"); // DEBUG
+			cv.wait(lock);
+			std::println("sleep end"); // DEBUG
+			continue;
+		}
 
-			// основная логика
-			if (event->status == Event::Status::STOPPED) {
-				printf("execute event\n");
-			}
+		if (!_is_running) { break; }
+		if (_db_changed)  { _db_changed = false; std::println("db changed"); continue; }
 
-			// выполняем action внутри текущего активного event
-			for (auto &action : event->actions) {
-				action->print_debug();
 
-				event->status = Event::Status::RUNNING;
+		// выполнение event
+	 	std::println("check event {}({}, {}) : \"{}\"", event->name, event->id, +event->status, event->description); // DEBUG
 
-				if (action->status == Action::Status::PAST) { continue; }
-				if (action->status == Action::Status::STOPPED) {
-					printf("execute action\n");
-					exec_action_in_thread(*action, event->id);
-					_db.insert_event(*event);
+		for (auto &action : event->actions) {
+			action->print_debug(); // DEBUG
+
+			if (action->status == Action::Status::PAST) { continue; }
+			if (action->status == Action::Status::STOPPED) {
+				printf("execute action\n"); // DEBUG
+				// сохраняем в бд
+				if (event->status != Event::Status::RUNNING) {
+					event->status = Event::Status::RUNNING;
+					if (!_db.insert_event(*event)) {
+						std::println("fuck... failed to update event: {}", _db.last_error());
+						continue;
+					}
 				}
 
-				timer = 0;
-
-				break;
+				action->status = Action::Status::RUNNING;
+				if (!_db.insert_action(*action, event->id)) {
+					action->status = Action::Status::STOPPED;
+					std::println("fuck... failed to update action: {}", _db.last_error());
+					continue;
+				}
+				exec_action_in_thread(action, event->id);
 			}
 
-			// проверяем завершение всех action в событии
-			if (!event->actions.empty() && event->actions.back()->status == Action::Status::PAST) {
-				printf("mark event as past\n");
-				event->status = Event::Status::PAST;
-				auto_insert_event(_db, *event);
-			}		
+			// if (event->status == Event::Status::RUNNING)
+			// event->status = Event::Status::RUNNING;
+
+			// break;
 		}
 
-		if (timer < steps[std::size(steps) - 1].max_timer) { ++timer; }
-
-		int sleep_ms = steps[std::size(steps) - 1].ms;
-
-		for (const auto& step : steps) {
-			if (timer <= step.max_timer) {
-				sleep_ms = step.ms;
-				break;
+		if (event->actions.empty() || event->actions.back()->status == Action::Status::PAST) {
+			std::println("mark event as past"); // DEBUG
+			event->status = Event::Status::PAST;
+			if (_db.insert_event(*event)) {
+				std::println("fuck... failed to update event: {}", _db.last_error());
 			}
 		}
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
+		// std::this_thread::sleep_for(std::chrono::milliseconds(1500));
 	}
+}
+
+void Daemon::watchdog() {
+	// while (_is_running) {
+	// 	std::vector<std::shared_ptr<Event>> db_events;
+	// 	auto_fetch_events(_db, db_events);
+	//
+	// 	{
+	// 		// анализ diff с памятью
+	// 		std::lock_guard<std::mutex> lock(_mutex);
+	//
+	// 		_events.clear();
+	//
+	// 		for (auto &db_event : db_events) {
+	// 			if (db_event->status == Event::Status::PAST) { continue; }
+	//
+	// 			_events.push_back(std::make_shared<Event>(*db_event));
+	// 		}
+	//
+	// 		_db_changed = true;
+	// 		cv.notify_one();
+	//
+	// 	}
+	//
+	// 	std::this_thread::sleep_for(std::chrono::seconds(5));
+	// }
 }
 
 void Daemon::load_db() {
-	auto_fetch_events(_db, events);
-
-	//     FOR TESTING
-	if (!events.empty()) {
-		events.front()->start = std::chrono::system_clock::now() + std::chrono::seconds(5);
-	}
-	// END FOR TESTING
-
-	std::sort(events.begin(), events.end());
+	// auto_fetch_events(_db, _events);
+	//
+	// //     FOR TESTING
+	// if (!_events.empty()) {
+	// 	_events.front()->start = std::chrono::system_clock::now() + std::chrono::seconds(5);
+	// 	_events.front()->end = std::chrono::system_clock::now() + std::chrono::seconds(10);
+	// 	_db.insert_event(*_events.front());
+	// }
+	// // END FOR TESTING
+	//
+	// std::sort(_events.begin(), _events.end());
 }
 
-void Daemon::exec_action_in_thread(Action &action, const uint64_t event_id) {
-	std::thread th(
-			[&action, event_id, this]() {
-			action.status = Action::Status::RUNNING;
-			action.exec();
-			action.status = Action::Status::PAST;
-			_db.insert_action(action, event_id);
-			});
-	th.detach();
+void Daemon::exec_action_in_thread(std::shared_ptr<Action> action, const uint64_t event_id) {
+	action_procs.enqueue([this, action, event_id]() {
+		std::println("executing action in thread");
+
+		action->exec();
+
+		std::println("done executing action in thread");
+
+		{
+			std::lock_guard<std::mutex> lock(this->_mutex);
+
+			action->status = Action::Status::PAST;
+
+			if (!this->_db.insert_action(*action, event_id)) {
+				std::println("fuck... failed to save action: {}", this->_db.last_error());
+			}
+
+			this->_db_changed = true;
+		}
+
+		this->cv.notify_all();
+	});
 }
