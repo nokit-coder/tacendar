@@ -1,6 +1,6 @@
 #include <chrono>
 
-#include "../include/event.h"
+#include "event.h"
 
 int operator+(Event::Status s) {
 	return static_cast<int>(s);
