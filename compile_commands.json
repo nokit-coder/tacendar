@@ -1,0 +1,72 @@
+[
+  {
+    "file": "src/main.cpp",
+    "arguments": [
+      "/usr/bin/g++",
+      "-std=c++23",
+      "-Iinclude",
+      "-c",
+      "src/main.cpp",
+      "-o",
+      "obj/main.o"
+    ],
+    "directory": "/home/nokit/Projects/tacendar",
+    "output": "obj/main.o"
+  },
+  {
+    "file": "src/dbManager.cpp",
+    "arguments": [
+      "/usr/bin/g++",
+      "-std=c++23",
+      "-Iinclude",
+      "-c",
+      "src/dbManager.cpp",
+      "-o",
+      "obj/dbManager.o"
+    ],
+    "directory": "/home/nokit/Projects/tacendar",
+    "output": "obj/dbManager.o"
+  },
+  {
+    "file": "src/event.cpp",
+    "arguments": [
+      "/usr/bin/g++",
+      "-std=c++23",
+      "-Iinclude",
+      "-c",
+      "src/event.cpp",
+      "-o",
+      "obj/event.o"
+    ],
+    "directory": "/home/nokit/Projects/tacendar",
+    "output": "obj/event.o"
+  },
+  {
+    "file": "src/action.cpp",
+    "arguments": [
+      "/usr/bin/g++",
+      "-std=c++23",
+      "-Iinclude",
+      "-c",
+      "src/action.cpp",
+      "-o",
+      "obj/action.o"
+    ],
+    "directory": "/home/nokit/Projects/tacendar",
+    "output": "obj/action.o"
+  },
+  {
+    "file": "src/daemon.cpp",
+    "arguments": [
+      "/usr/bin/g++",
+      "-std=c++23",
+      "-Iinclude",
+      "-c",
+      "src/daemon.cpp",
+      "-o",
+      "obj/daemon.o"
+    ],
+    "directory": "/home/nokit/Projects/tacendar",
+    "output": "obj/daemon.o"
+  }
+]

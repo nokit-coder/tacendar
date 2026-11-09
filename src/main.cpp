@@ -75,7 +75,7 @@ int main() {
 	auto_insert_event(db, e);
 
 	std::println("notify");
-	d.cv.notify_one();
+	d.notify();
 	
 	// std::this_thread::sleep_for(std::chrono::seconds(10));
 	//

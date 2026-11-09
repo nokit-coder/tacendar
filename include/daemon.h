@@ -5,7 +5,6 @@
 #include <memory>
 #include <mutex>
 #include <thread>
-#include <vector>
 
 #include "action.h"
 #include "dbManager.h"
@@ -18,15 +17,14 @@ public:
   Daemon(SqliteDb &db);
   ~Daemon();
 
-  void load_db();
   bool start_daemon();
   bool stop_daemon();
   void watchdog();
 
-  std::condition_variable cv;
+	void notify();
 
 private:
-  SqliteDb _db;
+  SqliteDb &_db;
 
   bool _is_running = false;
   bool _db_changed = false;
@@ -35,6 +33,7 @@ private:
 	ThreadPool action_procs;
 
   std::mutex _mutex;
+  std::condition_variable _cv;
 
   void daemon();
   std::shared_ptr<Event> find_event_by_id(uint64_t event_id);

@@ -1,10 +1,10 @@
 (C) разнести dbManager по файлам +dbManager @refactor
-(C) добавить базовый класс Db и наследования для поддержки разных схем +dbManager @refactor
+(E) добавить базовый класс Db и наследования для поддержки разных схем +dbManager @refactor
 (A) реализовать чекалку для бд +watchdog @feat
 (D) вынести вспомогательные функции в utils @refactor
 (C) реализовать задержку для action +action @feat
 (E) наследование -> \+возможность интеграции с другими системами +action @feat
-(D) разнести actions по файлам когда их будет несколько +action @refactor
+(D) разнести actions по файлам когда их будет много +action @refactor
 (A) вынести prepare_stmt в функцию +dbManager @refactor
 (D) добавить ALIAS в sql fetch запросах(т.к. Action и Event ничего не знает про то, что происходит в sql запросах) +dbManager @refactor подумать что я хотел тут сделать @idea
 (B) добавить ActionNotify +action @feat
@@ -23,3 +23,7 @@ x 2026-06-13 2026-06-13 оператор == +action @feat
 (A) 2026-11-08 добавить event.next. Это следующее время начала event(для возможности добавить repeater) +event @feat
 (A) 2026-11-08 разнести threadPool по файлам(.h, .cpp) +threadPool @refactor
 (A) 2026-11-08 сделать предикат(lambda функ.) для всех cv.wait чтобы не было бесконечных задержек +daemon @fix
+(A) 2026-11-08 поменять чтение с int на int64 +dbManager @fix
+(B) 2026-11-09 поле опр. порядок выполнения(0 - парарельно) +action @feat
+(B) 2026-11-09 поле опр. период выполнения START, END +action @feat
+(A) 2026-11-09 обработка падений, особых случаев и вообщем всё переработать в exec +action @refactor

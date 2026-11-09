@@ -439,7 +439,7 @@ bool SqliteDb::fetch_actions(const uint64_t event_id, std::vector<std::shared_pt
 bool auto_insert_event(SqliteDb &db, Event &event) {
   if (!db.insert_event(event)) { return false; }
 
-  for (auto &action : event.actions) {
+  for (const auto &action : event.actions) {
     if (!db.insert_action(*action, event.id)) { return false; }
   }
 
@@ -447,7 +447,7 @@ bool auto_insert_event(SqliteDb &db, Event &event) {
 }
 
 bool auto_insert_events(SqliteDb &db, std::vector<std::shared_ptr<Event>> &events) {
-  for (auto &event : events) {
+  for (const auto &event : events) {
     if (!auto_insert_event(db, *event)) { return false; }
   }
 
@@ -466,7 +466,7 @@ bool auto_fetch_events(SqliteDb &db, std::vector<std::shared_ptr<Event>> &events
   db.fetch_events(events);
   if (!db.last_error().empty()) { return false; }
 
-  for (auto &event : events) {
+  for (const auto &event : events) {
     db.fetch_actions(event->id, event->actions);
     if (!db.last_error().empty()) { return false; }
   }

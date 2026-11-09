@@ -28,9 +28,5 @@ public:
 
 int operator+(Event::Status s);
 
-bool operator<(const Event &e1, const Event &e2);
-bool operator==(const std::shared_ptr<Event> &e1, const std::shared_ptr<Event> &e2);
-bool operator==(const Event &e1, const Event &e2);
-
 int64_t to_unix_seconds(std::chrono::system_clock::time_point tp);
 std::chrono::system_clock::time_point from_unix_seconds(int64_t unix_seconds);

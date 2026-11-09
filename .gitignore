@@ -4,3 +4,4 @@ main
 db.db
 plan.txt
 .stignore
+.stfolder/

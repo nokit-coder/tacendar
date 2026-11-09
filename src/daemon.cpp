@@ -5,9 +5,7 @@
 
 #include <condition_variable>
 #include <chrono>
-#include <cstddef>
 #include <cstdint>
-#include <cstdio>
 #include <iostream>
 #include <memory>
 #include <mutex>
@@ -19,6 +17,10 @@ Daemon::Daemon(SqliteDb &db) : _db(db) {}
 
 Daemon::~Daemon() {
 	stop_daemon();
+}
+
+void Daemon::notify() {
+	_cv.notify_all();
 }
 
 bool Daemon::start_daemon() {
@@ -34,7 +36,7 @@ bool Daemon::stop_daemon() {
 	if (_is_running == false) { return false; }
 	std::println(std::cout, "stopping daemon");
 	_is_running = false;
-	cv.notify_one();
+	_cv.notify_one();
 	if (daemon_proc.joinable()) { daemon_proc.join(); }
 	if (watchdog_proc.joinable()) { watchdog_proc.join(); }
 	return true;
@@ -64,10 +66,10 @@ void Daemon::daemon() {
 		{
 			std::vector<std::shared_ptr<Event>> events;
 			if (_db.fetch_running_events(events)) {
-				for (auto event : events) {
+				for (const auto& event : events) {
 					std::println("check running event {}({}, {}) : \"{}\"", event->name, event->id, +event->status, event->description); // DEBUG
 					_db.fetch_actions(event->id, event->actions);
-					for (auto action : event->actions) {
+					for (const auto& action : event->actions) {
 						if (action->status == Action::Status::STOPPED) {
 							action->status = Action::Status::RUNNING;
 							if (!_db.insert_action(*action, event->id)) {
@@ -102,12 +104,12 @@ void Daemon::daemon() {
 		// ожидание
 		if (event != nullptr) {
 			std::println("wait start"); // DEBUG
-			cv.wait_until(lock, event->start);
+			_cv.wait_until(lock, event->start);
 			std::println("wait end"); // DEBUG
 		} else {
 			// бесконечный сон
 			std::println("sleep start"); // DEBUG
-			cv.wait(lock);
+			_cv.wait(lock);
 			std::println("sleep end"); // DEBUG
 			continue;
 		}
@@ -120,12 +122,12 @@ void Daemon::daemon() {
 		// выполнение event
 	 	std::println("check event {}({}, {}) : \"{}\"", event->name, event->id, +event->status, event->description); // DEBUG
 
-		for (auto &action : event->actions) {
+		for (const auto &action : event->actions) {
 			action->print_debug(); // DEBUG
 
 			if (action->status == Action::Status::PAST) { continue; }
 			if (action->status == Action::Status::STOPPED) {
-				printf("execute action\n"); // DEBUG
+				std::println("execute action\n"); // DEBUG
 				// сохраняем в бд
 				if (event->status != Event::Status::RUNNING) {
 					event->status = Event::Status::RUNNING;
@@ -160,9 +162,6 @@ void Daemon::daemon() {
 void Daemon::watchdog() {
 }
 
-void Daemon::load_db() {
-}
-
 void Daemon::exec_action_in_thread(std::shared_ptr<Action> action, const uint64_t event_id) {
 	action_procs.enqueue([this, action, event_id]() {
 		std::println("executing action in thread"); // DEBUG
@@ -183,6 +182,6 @@ void Daemon::exec_action_in_thread(std::shared_ptr<Action> action, const uint64_
 			this->_db_changed = true;
 		}
 
-		this->cv.notify_all();
+		this->_cv.notify_all();
 	});
 }
