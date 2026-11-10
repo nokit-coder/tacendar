@@ -30,9 +30,10 @@ void Action::save_to_db(sqlite3_stmt *stmt) const {
 	int idx_type   = sqlite3_bind_parameter_index( stmt, ":type"   );
 	int idx_status = sqlite3_bind_parameter_index( stmt, ":status" );
 
-	if ( idx_id     > 0 ) { sqlite3_bind_int64 ( stmt, idx_id,      id     ); }
-	if ( idx_type   > 0 ) { sqlite3_bind_int   ( stmt, idx_type,   +type   ); }
-	if ( idx_status > 0 ) { sqlite3_bind_int   ( stmt, idx_status, +status ); }
+	if ( idx_id     > 0 ) { if (id == 0) sqlite3_bind_null  ( stmt, idx_id              ); }
+	if ( idx_id     > 0 ) { if (id > 0)  sqlite3_bind_int64 ( stmt, idx_id,      id     ); }
+	if ( idx_type   > 0 ) {              sqlite3_bind_int   ( stmt, idx_type,   +type   ); }
+	if ( idx_status > 0 ) {              sqlite3_bind_int   ( stmt, idx_status, +status ); }
 }
 void ActionCommand::save_to_db(sqlite3_stmt *stmt) const {
   Action::save_to_db(stmt);

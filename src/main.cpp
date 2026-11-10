@@ -70,6 +70,8 @@ int main() {
 	std::this_thread::sleep_for(std::chrono::seconds(2));
 
 	std::println("e1");
+	e.id = 0;
+	e.name = "e1";
 	e.start = std::chrono::system_clock::now() + std::chrono::seconds(4);
 	e.end = std::chrono::system_clock::now() + std::chrono::seconds(9);
 	auto_insert_event(db, e);
@@ -77,14 +79,18 @@ int main() {
 	std::println("notify");
 	d.notify();
 	
-	// std::this_thread::sleep_for(std::chrono::seconds(10));
-	//
-	// std::println("e2");
-	// e.id = 0;
-	// e.start = std::chrono::system_clock::now() + std::chrono::seconds(5);
-	// e.end = std::chrono::system_clock::now() + std::chrono::seconds(10);
-	// auto_insert_event(db, e);
-	//
+	std::this_thread::sleep_for(std::chrono::seconds(10));
+
+	std::println("e2");
+	e.id = 0;
+	e.name = "e2";
+	e.start = std::chrono::system_clock::now() + std::chrono::seconds(5);
+	e.end = std::chrono::system_clock::now() + std::chrono::seconds(10);
+	auto_insert_event(db, e);
+
+	std::println("notify");
+	d.notify();
+  //
 	// std::this_thread::sleep_for(std::chrono::seconds(10));
 	//
 	// std::println("e3");
