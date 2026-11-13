@@ -125,36 +125,26 @@ void Daemon::daemon() {
 		for (const auto &action : event->actions) {
 			action->print_debug(); // DEBUG
 
-			if (action->status == Action::Status::PAST) { continue; }
-			if (action->status == Action::Status::STOPPED) {
-				std::println("execute action\n"); // DEBUG
-				// сохраняем в бд
-				if (event->status != Event::Status::RUNNING) {
-					event->status = Event::Status::RUNNING;
-					if (!_db.insert_event(*event)) {
-						std::println("fuck... failed to update event: {}", _db.last_error());
-						continue;
-					}
-				}
+			if (action->status != Action::Status::STOPPED) { continue; }
+			std::println("execute action\n"); // DEBUG
 
-				action->status = Action::Status::RUNNING;
-				if (!_db.insert_action(*action, event->id)) {
-					action->status = Action::Status::STOPPED;
-					std::println("fuck... failed to update action: {}", _db.last_error());
+			// сохраняем в бд
+			if (event->status != Event::Status::RUNNING) {
+				event->status = Event::Status::RUNNING;
+				if (!_db.insert_event(*event)) {
+					std::println("fuck... failed to update event: {}", _db.last_error());
 					continue;
 				}
-				exec_action_in_thread(action, event->id);
 			}
+
+			action->status = Action::Status::RUNNING;
+			if (!_db.insert_action(*action, event->id)) {
+				std::println("fuck... failed to update action: {}", _db.last_error());
+				continue;
+			}
+			exec_action_in_thread(action, event->id);
 
 			// break;
-		}
-
-		if (event->actions.empty() || event->actions.back()->status == Action::Status::PAST) {
-			std::println("mark event as past"); // DEBUG
-			event->status = Event::Status::PAST;
-			if (!_db.insert_event(*event)) {
-				std::println("fuck... failed to update event: {}", _db.last_error());
-			}
 		}
 	}
 }

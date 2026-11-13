@@ -86,6 +86,9 @@ int main() {
 	e.name = "e2";
 	e.start = std::chrono::system_clock::now() + std::chrono::seconds(5);
 	e.end = std::chrono::system_clock::now() + std::chrono::seconds(10);
+
+	e.actions[0]->id = 0;
+
 	auto_insert_event(db, e);
 
 	std::println("notify");
